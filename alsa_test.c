@@ -8,16 +8,9 @@
 
 #define PLAYBACK_DEVICE "default"		// Let the system pick the wanted output
 #define CAPTURE_DEVICE  "plughw:0,0"	// Set the line device you are recording from
-
-// TODO: make these parameterized
-static unsigned int rate = 44100;
-static unsigned int format = SND_PCM_FORMAT_S16_LE;
-static unsigned int in_channels  = 1;
-static unsigned int out_channels = 1;
-
-int periods_per_buffer = 3;
-snd_pcm_uframes_t period_size = 2048; //bytes
-uint32_t buffer_time;
+#define LSB(x) 2*x						// Least significant byte in the sample
+#define MSB(x) 2*x+1					// Most significant byte in the sample
+#define debug_print printf				// So later it can be quickly removed
 
 typedef struct{
 	int periods_per_buffer;
@@ -27,11 +20,30 @@ typedef struct{
 	uint32_t buffer_time;
 }audioParams;
 
+// TODO: make these parameterized
+static unsigned int rate = 44100;
+static unsigned int format = SND_PCM_FORMAT_S16_LE;
+static unsigned int in_channels  = 1;
+static unsigned int out_channels = 1;
+
+const int bytes_per_sample = 2;
+const int frames = 1024;
+snd_pcm_uframes_t period_size = frames * bytes_per_sample; //bytes
+int periods_per_buffer = 3;
+
+uint32_t buffer_time;
 audioParams playbackParams, captureParams;
 
 void print_params(audioParams params) {
 	printf("Direction: %s\n\tPeriods: %d\n\tPeriod size: %zu\n\tBuffer size: %zu\n\tBuffer time: %zu\n",
 		params.direction, params.periods_per_buffer, params.period_size, params.buffer_size, params.buffer_time);
+}
+
+void print_byte_as_bits(char val) {
+	for (int i = 7; 0 <= i; i--) {
+		printf("%c", (val & (1 << i)) ? '1' : '0');
+	}
+	printf("\n");
 }
 
 // Open the devices and configure them appropriately
@@ -137,33 +149,19 @@ static int set_parameters(snd_pcm_t **handle, const char *device, int direction,
 	return 0;
 }
 
-void add_echo(uint32_t *current_buffer, uint32_t *next_output, uint32_t buffer_size) {
-	// uint32_t *circular_buffer;
-	// int circular_buffer_size = 1024;
+void add_echo(short *input_buffer, short *output_buffer, snd_pcm_sframes_t buffer_size) {
+	short *circular_buffer;
+	int circular_buffer_index = 0;
+	int echo_amount = 1024;			// How many frames/samples of echo
 
-	// circular_buffer = malloc(circular_buffer_size * sizeof(uint32_t));
-	// memset(circular_buffer, 0, circular_buffer_size * sizeof(uint32_t));
+	circular_buffer = malloc(echo_amount * sizeof(short));
+	memset(circular_buffer, 0, echo_amount * sizeof(short));
 
-	// Circular buffer = previous output
-	// for (int i = 0; i < circular_buffer_size; i++) {
-	// 	circular_buffer[ 4*i ] = current_buffer[ 4*i ];
-	// 	circular_buffer[4*i+1] = current_buffer[4*i+1];
-	// 	circular_buffer[4*i+2] = current_buffer[4*i+2];
-	// 	circular_buffer[4*i+3] = current_buffer[4*i+1];
-	// }
+	for (int sample = 0; sample < buffer_size; sample++){
+		output_buffer[sample] = (input_buffer[sample] / 2) + (circular_buffer[circular_buffer_index] / 2);
+		circular_buffer[ circular_buffer_index ] = output_buffer[sample];
 
-	for (int i = 0; i < buffer_size / 4; i++){
-		// for (int j = 0; j < circular_buffer_size/4; j++) {
-		// 	circular_buffer[ 4*j ] = current_buffer[ 4*i ];
-		// 	circular_buffer[4*j+1] = current_buffer[4*i+1];
-		// 	circular_buffer[4*j+2] = current_buffer[4*i+2];
-		// 	circular_buffer[4*j+3] = current_buffer[4*i+1];
-		// }
-		//														V->so here should be the circular buffer add
-		next_output[ 4*i ] = (current_buffer[ 4*i ] * 0.5) + (current_buffer[ 4*i ] * 0.5);
-		next_output[4*i+1] = (current_buffer[4*i+1] * 0.5) + (current_buffer[4*i+1] * 0.5);
-		next_output[4*i+2] = (current_buffer[4*i+2] * 0.5) + (current_buffer[4*i+2] * 0.5);
-		next_output[4*i+3] = (current_buffer[4*i+3] * 0.5) + (current_buffer[4*i+3] * 0.5);
+		circular_buffer_index = (circular_buffer_index + 1) % echo_amount;
 	}
 }
 
@@ -199,50 +197,37 @@ int main(int argc, char **argv) {
 	print_params(captureParams);
 	print_params(playbackParams);
 
-	// TODO: calculate better buffer sizes
-	// 												  V->bytes per sample
-	uint32_t buffer_size_in  = captureParams.buffer_size ;//captureParams.period_size  * captureParams.periods_per_buffer  * in_channels ;
+	uint32_t buffer_size_in  = captureParams.buffer_size ;
 		printf("In buffer size: %d\n", buffer_size_in);
-	uint32_t buffer_size_out = playbackParams.buffer_size;//playbackParams.period_size * playbackParams.periods_per_buffer * out_channels;
+	uint32_t buffer_size_out = playbackParams.buffer_size;
 		printf("Out buffer size: %d\n", buffer_size_out);
 
-	uint32_t *read_buffer  = malloc(buffer_size_in  * sizeof(uint32_t));
-	uint32_t *write_buffer = malloc(buffer_size_out * sizeof(uint32_t));
-	uint32_t *proc_buffer  = malloc(buffer_size_out * sizeof(uint32_t));
+	// Input, processing and output buffers are the size of a reading buffer * sample size (short)
+	short *read_buffer  = malloc(buffer_size_in  * sizeof(short));
+	short *write_buffer = malloc(buffer_size_out * sizeof(short));
+	short *proc_buffer  = malloc(buffer_size_out * sizeof(short));
+	memset(read_buffer , 0, buffer_size_in  * sizeof(short));
+	memset(write_buffer, 0, buffer_size_out * sizeof(short));
+	memset(proc_buffer , 0, buffer_size_out * sizeof(short));
 
-	memset(read_buffer , 0, buffer_size_in  * sizeof(uint32_t));
-	memset(write_buffer, 0, buffer_size_out * sizeof(uint32_t));
-	memset(proc_buffer , 0, buffer_size_out * sizeof(uint32_t));
-
-	snd_pcm_sframes_t inframes, outframes, avail_frames;	// The numbers of read frames
+	snd_pcm_sframes_t inframes, outframes;
 	while (1) {
 		// Read line in
 		while ((inframes = snd_pcm_readi(capture_handle, read_buffer, buffer_size_in)) < 0) {
 			fprintf(stderr, "Input buffer overrun (%s)\n", strerror(inframes));
 			snd_pcm_prepare(capture_handle);
 		}
-		avail_frames = (inframes <= buffer_size_out) ? inframes : buffer_size_out;
-
-		if (inframes != buffer_size_in) {
-			fprintf(stderr, "Short read\n");
-		}
 
 		// Process output
-		add_echo(read_buffer, proc_buffer, avail_frames);
-		memcpy(write_buffer, proc_buffer, buffer_size_out * sizeof(uint32_t));
-		// *write_buffer = *proc_buffer;
+		add_echo(read_buffer, proc_buffer, inframes);
+		memcpy(write_buffer, proc_buffer, buffer_size_out * sizeof(short));
 
 		// Write to audio device
-		while ((outframes = snd_pcm_writei(playback_handle, write_buffer, buffer_size_out)) < 0) {
+		while ((outframes = snd_pcm_writei(playback_handle, write_buffer, inframes)) < 0) {
 			fprintf(stderr, "Output buffer underrun (%s)\n", strerror(outframes));
 			snd_pcm_prepare(playback_handle);
 		}
-
-		if (outframes != avail_frames) {
-			fprintf(stderr, "Short write. %d vs %d\n", outframes, avail_frames);
-		}
 	}
-
 
 	snd_pcm_drain(playback_handle);	// Maybe not necesarry to drain the buffer
 	snd_pcm_close(playback_handle);
