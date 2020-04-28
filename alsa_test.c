@@ -1,6 +1,7 @@
 #include <alsa/asoundlib.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <stdint.h>
 #include <errno.h>
 #include <pthread.h>
 #include <unistd.h>
@@ -11,6 +12,8 @@
 #define LSB(x) 2*x						// Least significant byte in the sample
 #define MSB(x) 2*x+1					// Most significant byte in the sample
 #define debug_print printf				// So later it can be quickly removed
+#define FRAMES_PER_BUFFER 1024
+#define BYTES_PER_SAMPLE 2
 
 typedef struct{
 	int periods_per_buffer;
@@ -26,9 +29,7 @@ static unsigned int format = SND_PCM_FORMAT_S16_LE;
 static unsigned int in_channels  = 1;
 static unsigned int out_channels = 1;
 
-const int bytes_per_sample = 2;
-const int frames = 1024;
-snd_pcm_uframes_t period_size = frames * bytes_per_sample; //bytes
+snd_pcm_uframes_t period_size = FRAMES_PER_BUFFER * BYTES_PER_SAMPLE; //bytes
 int periods_per_buffer = 3;
 
 uint32_t buffer_time;
