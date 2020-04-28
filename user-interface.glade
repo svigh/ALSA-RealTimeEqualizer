@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Generated with glade 3.22.2 -->
+<interface>
+  <requires lib="gtk+" version="3.20"/>
+  <object class="GtkWindow" id="MainWindow">
+    <property name="width_request">1000</property>
+    <property name="height_request">500</property>
+    <property name="can_focus">False</property>
+    <child type="titlebar">
+      <placeholder/>
+    </child>
+    <child>
+      <object class="GtkLayout" id="ButtonsLayout">
+        <property name="visible">True</property>
+        <property name="can_focus">False</property>
+        <property name="width">1000</property>
+        <property name="height">500</property>
+        <child>
+          <object class="GtkButton" id="StopEffectsButton">
+            <property name="label" translatable="yes">Stop Effects</property>
+            <property name="width_request">100</property>
+            <property name="height_request">80</property>
+            <property name="visible">True</property>
+            <property name="can_focus">True</property>
+            <property name="receives_default">True</property>
+            <signal name="clicked" handler="StopEffectsButton_clicked" swapped="no"/>
+          </object>
+          <packing>
+            <property name="x">50</property>
+            <property name="y">200</property>
+          </packing>
+        </child>
+        <child>
+          <object class="GtkButton" id="AddEchoButton">
+            <property name="label" translatable="yes">Add Echo</property>
+            <property name="width_request">100</property>
+            <property name="height_request">80</property>
+            <property name="visible">True</property>
+            <property name="can_focus">True</property>
+            <property name="receives_default">True</property>
+            <signal name="clicked" handler="AddEchoButton_clicked" swapped="no"/>
+          </object>
+          <packing>
+            <property name="x">850</property>
+            <property name="y">200</property>
+          </packing>
+        </child>
+      </object>
+    </child>
+  </object>
+</interface>
