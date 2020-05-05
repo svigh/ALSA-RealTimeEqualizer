@@ -6,196 +6,79 @@
 #include <unistd.h>
 #include <math.h>
 
+#include "utils.h"
+#include "effects.h"
+
 pthread_mutex_t mtx = PTHREAD_MUTEX_INITIALIZER;
 
-#define PLAYBACK_DEVICE "default"		// Let the system pick the wanted output
-#define CAPTURE_DEVICE  "plughw:0,0"	// Set the line device you are recording from
-#define LSB(x) 2*x						// Least significant byte in the sample
-#define MSB(x) 2*x+1					// Most significant byte in the sample
-#define debug_print printf				// So later it can be quickly removed
-#define BYTES_PER_SAMPLE 2
-#define FRAMES_PER_BUFFER 1024
-
-typedef struct{
-	int periods_per_buffer;
-	char *direction;
-	snd_pcm_uframes_t period_size;
-	snd_pcm_uframes_t buffer_size;
-	uint32_t buffer_time;
-}audioParams;
-
-// TODO: make these parameterized
-static unsigned int rate = 44100;
-static unsigned int format = SND_PCM_FORMAT_S16_LE;
-static unsigned int in_channels  = 1;
-static unsigned int out_channels = 1;
-
+unsigned int rate = 44100;
+unsigned int format = SND_PCM_FORMAT_S16_LE;
+unsigned int in_channels = CHANNELS;
+unsigned int out_channels = CHANNELS;
 int periods_per_buffer = 3;
 snd_pcm_uframes_t period_size = FRAMES_PER_BUFFER * BYTES_PER_SAMPLE; //bytes
+double EQ_bands_amplitude[10] = {0};
+double gain = 0;
 
+int addEcho = 0, addEQ = 0, addGain = 0, addDistort = 0;
 uint32_t buffer_time;
 audioParams playbackParams, captureParams;
 
-int addEcho = 0;
-
-void print_params(audioParams params) {
-	printf("Direction: %s\n\tPeriods: %d\n\tPeriod size: %zu\n\tBuffer size: %zu\n\tBuffer time: %zu\n",
-		params.direction, params.periods_per_buffer, params.period_size, params.buffer_size, params.buffer_time);
-}
-
-void print_byte_as_bits(char val) {
-	for (int i = 7; 0 <= i; i--) {
-		printf("%c", (val & (1 << i)) ? '1' : '0');
-	}
-	printf("\n");
-}
-
-// Open the devices and configure them appropriately
-static int set_parameters(snd_pcm_t **handle, const char *device, int direction, int channels) {
-	int err;
-	snd_pcm_hw_params_t *hw_params;
-	const char *dirname = (direction == SND_PCM_STREAM_PLAYBACK) ? "PLAYBACK" : "CAPTURE";
-	captureParams.direction  = "CAPTURE";
-	playbackParams.direction = "PLAYBACK";
-
-	if ((err = snd_pcm_open(handle, device, direction, 0)) < 0) {
-		fprintf(stderr, "%s (%s): cannot open audio device (%s)\n",
-			device, dirname, snd_strerror(err));
-		return err;
-	}
-
-	if ((err = snd_pcm_hw_params_malloc(&hw_params)) < 0) {
-		fprintf(stderr, "%s (%s): cannot allocate hardware parameter structure(%s)\n",
-			device, dirname, snd_strerror(err));
-		return err;
-	}
-
-	if ((err = snd_pcm_hw_params_any(*handle, hw_params)) < 0) {
-		fprintf(stderr, "%s (%s): cannot initialize hardware parameter structure(%s)\n",
-			device, dirname, snd_strerror(err));
-		return err;
-	}
-
-	if ((err = snd_pcm_hw_params_set_access(*handle, hw_params, SND_PCM_ACCESS_RW_INTERLEAVED)) < 0) {
-		fprintf(stderr, "%s (%s): cannot set access type(%s)\n",
-			device, dirname, snd_strerror(err));
-		return err;
-	}
-
-	if ((err = snd_pcm_hw_params_set_format(*handle, hw_params, format)) < 0) {
-		fprintf(stderr, "%s (%s): cannot set sample format(%s)\n",
-			device, dirname, snd_strerror(err));
-		return err;
-	}
-
-	/* Set number of periods_per_buffer. Periods used to be called fragments. */
-	if ((err = snd_pcm_hw_params_set_periods_near(*handle, hw_params, &periods_per_buffer, NULL)) < 0) {
-		fprintf(stderr, "%s (%s): cannot set periods number(%s)\n",
-			device, dirname, snd_strerror(err));
-		return err;
-	}
-
-	/* Set number of periods_per_buffer. Periods used to be called fragments. */
-	if ((err = snd_pcm_hw_params_set_period_size_near(*handle, hw_params, &period_size, NULL)) < 0) {
-		fprintf(stderr, "%s (%s): cannot set period size(%s)\n",
-			device, dirname, snd_strerror(err));
-		return err;
-	}
-	if (!strcmp(dirname, "PLAYBACK"))
-		playbackParams.periods_per_buffer = periods_per_buffer;
-	else
-		captureParams.periods_per_buffer = periods_per_buffer;
-
-	if ((err = snd_pcm_hw_params_set_channels(*handle, hw_params, channels)) < 0) {
-		fprintf(stderr, "%s (%s): cannot set channel count(%s)\n",
-			device, dirname, snd_strerror(err));
-		return err;
-	}
-
-	/* Set buffer size (in frames). The resulting latency is given by */
-	/* latency = periodsize * periods_per_buffer / (rate * bytes_per_frame)	  */
-	snd_pcm_uframes_t buffer_size = (period_size * periods_per_buffer)>>2;
-	if ((err = snd_pcm_hw_params_set_buffer_size_near (*handle, hw_params, &buffer_size)) < 0){
-		fprintf(stderr, "%s (%s): cannot set buffer size(%s)\n",
-		device, dirname, snd_strerror(err));
-	}
-	if (!strcmp(dirname, "PLAYBACK"))
-		playbackParams.buffer_size = buffer_size;
-	else
-		captureParams.buffer_size = buffer_size;
-
-	if ((err = snd_pcm_hw_params_set_rate_near(*handle, hw_params, &rate, NULL)) < 0) {
-		fprintf(stderr, "%s (%s): cannot set sample rate(%s)\n",
-			device, dirname, snd_strerror(err));
-		return err;
-	}
-
-	if ((err = snd_pcm_hw_params(*handle, hw_params)) < 0) {
-		fprintf(stderr, "%s (%s): cannot set parameters(%s)\n",
-			device, dirname, snd_strerror(err));
-		return err;
-	}
-
-	snd_pcm_hw_params_get_period_size(hw_params, &period_size, &direction);
-	if (!strcmp(dirname, "PLAYBACK"))
-		playbackParams.period_size = period_size;
-	else
-		captureParams.period_size = period_size;
-
-	snd_pcm_hw_params_get_buffer_time(hw_params, &buffer_time, &direction);	// This changes the direction, careful
-	if (!strcmp(dirname, "PLAYBACK"))
-		playbackParams.buffer_time = buffer_time;
-	else
-		captureParams.buffer_time = buffer_time;
-
-	snd_pcm_hw_params_free(hw_params);
-
-	return 0;
-}
-
-void add_echo(short *input_buffer, short *output_buffer, snd_pcm_sframes_t buffer_size) {
-	short *circular_buffer;
-	int circular_buffer_index = 0;
-	int echo_amount = 1024;			// How many frames/samples of echo
-
-	circular_buffer = malloc(echo_amount * sizeof(short));
-	memset(circular_buffer, 0, echo_amount * sizeof(short));
-
-	for (int sample = 0; sample < buffer_size; sample++){
-		output_buffer[sample] = (input_buffer[sample] / 2) + (circular_buffer[circular_buffer_index] / 2);
-		circular_buffer[ circular_buffer_index ] = output_buffer[sample];
-
-		circular_buffer_index = (circular_buffer_index + 1) % echo_amount;
-	}
-}
-
+// Get the user/external input - always wait for it
 // TODO: Things get printed twice
 void *inputListener(void *vargp) {
-	int c;
+	int option;
 	while(1) {
 		printf("Make selection\n");
-		printf("1. Add Echo\n");
-		printf("2. Placeholder1\n");
-		printf("3. Placeholder2\n");
-		c = getchar_unlocked();
+		printf("1. Remove effects\n");
+		printf("2. Add Echo\n");
+		printf("3. Add Gain\n");
+		printf("4. Add Distort\n");
+		printf("5. Add EQ\n");
+		option = getchar();
 
-		switch (c)
-		{
-		case 49:	// 1
-			pthread_mutex_lock(&mtx);
-			addEcho = 1;
-			pthread_mutex_unlock(&mtx);
-			break;
-		case 50:	// 2
-			pthread_mutex_lock(&mtx);
-			addEcho = 0;
-			pthread_mutex_unlock(&mtx);
-			break;
-		case 51:	// 3
-			/* code */
-			break;
-		default:
-			break;
+		// Clear the newline buffer - ONLY FOR MANUAL INPUT WITHOUT GUI
+		// getchar();
+
+		switch (option)
+		{	// TODO: are mutexes here necessary?
+			case 49:	// 1 - Remove every effect
+				addEcho = 0;
+				addEQ = 0;
+				addGain = 0; gain = 0;
+				addDistort = 0;
+				break;
+			case 50:	// 2 - Add echo
+				if (addEcho)
+					addEcho = 0;
+				else
+					addEcho = 1;
+				break;
+			case 51:	// 3 - Add Amplification
+				// Set a fixed amount of maximum gain
+				if (addGain && gain >= 8) {
+					addGain = 0;
+					gain = 0;
+				}
+				else {
+					gain += 2;
+					addGain = 1;
+				}
+				break;
+			case 52:	// 4 - Add Distort
+				if (addDistort)
+					addDistort = 0;
+				else
+					addDistort = 1;
+				break;
+			case 53:	// 5 - Add EQ
+				if (addEQ)
+					addEQ = 0;
+				else
+					addEQ = 1;
+				break;
+			default:
+				break;
 		}
 	}
 }
@@ -246,12 +129,26 @@ int main(int argc, char **argv) {
 		printf("In buffer size: %d\n", buffer_size_in);
 	uint32_t buffer_size_out = playbackParams.buffer_size;
 		printf("Out buffer size: %d\n", buffer_size_out);
+
+
 	short *read_buffer  = malloc(buffer_size_in  * sizeof(short));
 	short *write_buffer = malloc(buffer_size_out * sizeof(short));
 	short *proc_buffer  = malloc(buffer_size_out * sizeof(short));
 	memset(read_buffer , 0, buffer_size_in  * sizeof(short));
 	memset(write_buffer, 0, buffer_size_out * sizeof(short));
 	memset(proc_buffer , 0, buffer_size_out * sizeof(short));
+
+		// Process output
+		//				 ->	read_buffer	  ->proc_buffer		 ->	proc_buffer	  ->proc_buffer		^
+		//				 |		V		  |		V			 |		V		  |		V			|
+		// |-----------| |	|-----------| |	|-----------|	 |	|-----------| |	|-----------|	|
+		// |alsa_readi |->	|	EQ		| ->|	echo	|->etc->|	distort	| ->|alsa_writei|	|	DATA STEPS
+		// |-----------| |	|-----------| |	|-----------|	 |	|-----------| |	|-----------|	|
+		// 			V	 |			V	  | 		V	 	 |			V	  |					|
+		// 	read_buffer	 |	proc_buffer  >|		proc_buffer	>|	  proc_buffer>|					|
+		//			V	 |																		|
+		//			>>>>>|																		V
+		//--------------------------------------TIME STEPS----------------------------------->
 
 
 	// Start the audio read-process-write
@@ -264,9 +161,17 @@ int main(int argc, char **argv) {
 		}
 		memcpy(proc_buffer, read_buffer, buffer_size_out * sizeof(short));
 
-		// Process output
+		if (addEQ)
+			add_eq(read_buffer, proc_buffer, inframes);
+
 		if (addEcho)
-			add_echo(read_buffer, proc_buffer, inframes);
+			add_echo(proc_buffer, proc_buffer, inframes);
+
+		if (addGain)
+			add_gain(proc_buffer, proc_buffer, inframes, gain);
+
+		if (addDistort)
+			add_distort(proc_buffer, proc_buffer, inframes, 1, 1);
 
 		memcpy(write_buffer, proc_buffer, buffer_size_out * sizeof(short));
 
@@ -288,5 +193,8 @@ int main(int argc, char **argv) {
 	snd_pcm_close(playback_handle);
 	snd_pcm_close(capture_handle);
 
+	free(read_buffer);
+	free(proc_buffer);
+	free(write_buffer);
 	return 0;
 }
