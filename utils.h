@@ -9,6 +9,7 @@
 #include <unistd.h>
 #include <math.h>
 #include <fftw3.h>
+#include <stdint.h>
 
 
 #define PLAYBACK_DEVICE "default"		// Let the system pick the wanted output
