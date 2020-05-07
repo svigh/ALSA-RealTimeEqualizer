@@ -14,21 +14,25 @@
 
 #define PLAYBACK_DEVICE "default"		// Let the system pick the wanted output
 #define CAPTURE_DEVICE  "plughw:0,0"	// Set the line device you are recording from
-#define LSB(x) 2*x						// Least significant byte in the sample
-#define MSB(x) 2*x+1					// Most significant byte in the sample
-#define debug_print printf				// So later it can be quickly removed
-#define debug_fprint fprintf			// So later it can be quickly removed
-#define BYTES_PER_SAMPLE 2
-#define FRAMES_PER_BUFFER 1024
 #define MAX_VALUE 32767
 #define MIN_VALUE -32767
-#define CHANNELS 1
+#define CHANNELS  1						// TODO: distorted sound when using 2 channels
+#define BYTES_PER_SAMPLE 2
+#define FRAMES_PER_BUFFER 1024
 #define PI 3.141592
-#define q 7
-#define FFT_WINDOW_SIZE 2048
+#define NUM_EQ_BANDS 10
+#define FFT_WINDOW_SIZE 512
+#define ECHO_AMOUNT 1024				// How many frames/samples of echo
+
+#define LSB(x) 2*x						// Least significant byte in the sample
+#define MSB(x) 2*x+1					// Most significant byte in the sample
 #define PLUS_FIVE(x) (x+5)
 #define EQ_BAND_FREQUENCY(x) (1<<(PLUS_FIVE(x)))			// Bands frequencies in Hz
 #define AMPLITUDE(x,y) sqrt((double)(x*x) + (y*y))
+#define dB_TO_LINEAR(x) pow(2, x / 6)
+
+#define debug_print printf				// So later it can be quickly removed
+#define debug_fprint fprintf			// So later it can be quickly removed
 
 typedef struct{
 	int periods_per_buffer;

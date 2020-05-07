@@ -1,11 +1,4 @@
 #include "utils.h"
-#include <alsa/asoundlib.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <errno.h>
-#include <pthread.h>
-#include <unistd.h>
-#include <math.h>
 
 void print_params(audioParams params) {
 	printf("Direction: %s\n\tPeriods: %d\n\tPeriod size: %zu\n\tBuffer size: %zu\n\tBuffer time: %zu\n",

@@ -1,11 +1,3 @@
-#include <alsa/asoundlib.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <errno.h>
-#include <pthread.h>
-#include <unistd.h>
-#include <math.h>
-
 #include "utils.h"
 #include "effects.h"
 
@@ -111,7 +103,13 @@ int main(int argc, char **argv) {
 		fprintf(stderr, "Cannot start CAPTURE interface(%s)\n", snd_strerror(err));
 		return err;
 	}
+extern unsigned int rate;
+extern unsigned int format;
+extern unsigned int in_channels;
+extern unsigned int out_channels;
 
+extern int periods_per_buffer;
+extern snd_pcm_uframes_t period_size;
 	print_params(captureParams);
 	print_params(playbackParams);
 
@@ -162,16 +160,16 @@ int main(int argc, char **argv) {
 		memcpy(proc_buffer, read_buffer, buffer_size_out * sizeof(short));
 
 		if (addEQ)
-			add_eq(read_buffer, proc_buffer, inframes);
-
-		if (addEcho)
-			add_echo(proc_buffer, proc_buffer, inframes);
+			add_eq(proc_buffer, proc_buffer, inframes);
 
 		if (addGain)
 			add_gain(proc_buffer, proc_buffer, inframes, gain);
 
+		if (addEcho)
+			add_echo(proc_buffer, proc_buffer, inframes);
+
 		if (addDistort)
-			add_distort(proc_buffer, proc_buffer, inframes, 1, 1);
+			add_distort(proc_buffer, proc_buffer, inframes, 0.9, 0.5);
 
 		memcpy(write_buffer, proc_buffer, buffer_size_out * sizeof(short));
 
