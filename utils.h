@@ -14,14 +14,14 @@
 
 #define PLAYBACK_DEVICE "default"		// Let the system pick the wanted output
 #define CAPTURE_DEVICE  "plughw:0,0"	// Set the line device you are recording from
-#define MAX_VALUE 32767
-#define MIN_VALUE -32767
+#define SHORT_MAX 32767
+#define SHORT_MIN -32767
 #define CHANNELS  1						// TODO: distorted sound when using 2 channels
 #define BYTES_PER_SAMPLE 2
 #define FRAMES_PER_BUFFER 1024
 #define PI 3.141592
 #define NUM_EQ_BANDS 10
-#define FFT_WINDOW_SIZE 512
+#define FFT_WINDOW_SIZE (NUM_EQ_BANDS * 2 + 1)	// To get 10 relevant frequency data { 0R; [1; N/2]-freq; (N/2; N) - mirrored freq }
 #define ECHO_AMOUNT 1024				// How many frames/samples of echo
 
 #define LSB(x) 2*x						// Least significant byte in the sample

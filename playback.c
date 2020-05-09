@@ -160,7 +160,7 @@ extern snd_pcm_uframes_t period_size;
 		memcpy(proc_buffer, read_buffer, buffer_size_out * sizeof(short));
 
 		if (addEQ)
-			add_eq(proc_buffer, proc_buffer, inframes);
+			add_eq(read_buffer, proc_buffer, inframes);
 
 		if (addGain)
 			add_gain(proc_buffer, proc_buffer, inframes, gain);

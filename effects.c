@@ -12,7 +12,7 @@ void add_echo(short *input_buffer, short *output_buffer, snd_pcm_sframes_t buffe
 	for (int ch = 0; ch < CHANNELS; ch++) {
 		for (int sample = ch; sample < buffer_size / CHANNELS; sample+=CHANNELS) {
 			output_buffer[sample] = (input_buffer[sample] / 2) + (circular_buffer[circular_buffer_index] / 2);
-			circular_buffer[ circular_buffer_index ] = output_buffer[sample];
+			circular_buffer[circular_buffer_index] = output_buffer[sample];
 
 			circular_buffer_index = (circular_buffer_index + 1) % ECHO_AMOUNT;
 		}
@@ -23,11 +23,11 @@ void add_echo(short *input_buffer, short *output_buffer, snd_pcm_sframes_t buffe
 void add_gain(short *input_buffer, short *output_buffer, snd_pcm_sframes_t buffer_size, double gain) {
 	for (int ch = 0; ch < CHANNELS; ch++) {
 		for (int sample = ch; sample < buffer_size / CHANNELS; sample+=CHANNELS) {
-			if ((input_buffer[sample] * gain) > MAX_VALUE) {
-				output_buffer[sample] = MAX_VALUE;
+			if ((input_buffer[sample] * gain) > SHORT_MAX) {
+				output_buffer[sample] = SHORT_MAX;
 			} else {
-				if ((input_buffer[sample] * gain) < MIN_VALUE) {
-					output_buffer[sample] = MIN_VALUE;
+				if ((input_buffer[sample] * gain) < SHORT_MIN) {
+					output_buffer[sample] = SHORT_MIN;
 				} else {
 					output_buffer[sample] = input_buffer[sample] * gain;
 				}
@@ -37,8 +37,8 @@ void add_gain(short *input_buffer, short *output_buffer, snd_pcm_sframes_t buffe
 }
 
 void add_distort(short *input_buffer, short *output_buffer, snd_pcm_sframes_t buffer_size, double min_multiplier, double max_multiplier) {
-	short max_threshold = MAX_VALUE * min_multiplier / 100;
-	short min_threshold = MIN_VALUE * max_multiplier / 100;
+	short max_threshold = SHORT_MAX * min_multiplier / 100;
+	short min_threshold = SHORT_MIN * max_multiplier / 100;
 	double volume_fix_amount = ((1 + min_multiplier) + (1 + max_multiplier)) / 2;	// TODO: is average or sum better?
 
 	for (int ch = 0; ch < CHANNELS; ch++) {
@@ -75,8 +75,8 @@ void add_eq(short *input_buffer, short *output_buffer, snd_pcm_sframes_t buffer_
 	pthread_mutex_unlock(&mtx);
 
 	// Buffers to keep the audio data and frequency data
-	fftw_complex *time_data = (fftw_complex*) fftw_malloc(sizeof(fftw_complex) * buffer_size);
-	fftw_complex *freq_data = (fftw_complex*) fftw_malloc(sizeof(fftw_complex) * buffer_size);
+	fftw_complex *time_data = (fftw_complex*) fftw_malloc(sizeof(fftw_complex) * FFT_WINDOW_SIZE);
+	fftw_complex *freq_data = (fftw_complex*) fftw_malloc(sizeof(fftw_complex) * FFT_WINDOW_SIZE);
 
 	// FFT 'objects' to execute the FFT alg
 	fftw_plan fft  = fftw_plan_dft_1d(FFT_WINDOW_SIZE, time_data, freq_data, FFTW_FORWARD, FFTW_ESTIMATE);
@@ -86,9 +86,10 @@ void add_eq(short *input_buffer, short *output_buffer, snd_pcm_sframes_t buffer_
 	//	 IF THE FFT WINDOW SIZE IS A POWER OF 2 ITS FASTER   //
 	// http://www.fftw.org/fftw3_doc/Real_002ddata-DFTs.html //
 	///////////////////////////////////////////////////////////
+	double mux = 1.0 / FFT_WINDOW_SIZE;
+
 	for (int ch = 0; ch < CHANNELS; ch++) {
 		for (int per = ch; per < buffer_size / FFT_WINDOW_SIZE; per+=CHANNELS) {
-			double mux = 1.0 / FFT_WINDOW_SIZE;
 
 			for(int sample = 0; sample < FFT_WINDOW_SIZE; sample++) {
 				time_data[sample][0] = input_buffer[sample + per * FFT_WINDOW_SIZE];
@@ -98,13 +99,18 @@ void add_eq(short *input_buffer, short *output_buffer, snd_pcm_sframes_t buffer_
 			// Get the frequency domain values
 			fftw_execute(fft);
 
+			// From N FFT points we get N symetric frequency data
+			// First frequency value doesnt matter for us(DC offset and carries no frequency dependent information)
+			// 1 - N/2 are relevant frequencies
 			// MODIFY THE FREQUENCIES ACCORDINGLY
-			int band = 0;
-			for (int sample = 0; sample < FFT_WINDOW_SIZE; sample++) {
-				if ((sample != 0) && (sample % (int)floor(FFT_WINDOW_SIZE / (NUM_EQ_BANDS - 1)) == 0) && band < NUM_EQ_BANDS - 1) {
-					band++;
-				}
-				// debug_fprint(stderr, "EQ[%d]= %lf\n",band, EQ_bands_amplitude[band]);
+			int band = NUM_EQ_BANDS;
+			for (int sample = 1; sample <= (FFT_WINDOW_SIZE / 2); sample++, band--) {
+				freq_data[sample][0] *= dB_TO_LINEAR(EQ_bands_amplitude[band]);
+				freq_data[sample][1] *= dB_TO_LINEAR(EQ_bands_amplitude[band]);
+			}
+
+			// FOR THE MIRRORED PART OF THE FREQUENCY DATA
+			for (int sample = ((FFT_WINDOW_SIZE / 2) + 1); sample < FFT_WINDOW_SIZE; sample++, band++) {
 				freq_data[sample][0] *= dB_TO_LINEAR(EQ_bands_amplitude[band]);
 				freq_data[sample][1] *= dB_TO_LINEAR(EQ_bands_amplitude[band]);
 			}
@@ -118,10 +124,14 @@ void add_eq(short *input_buffer, short *output_buffer, snd_pcm_sframes_t buffer_
 			// Rebuild the audio samples
 			fftw_execute(ifft);
 
-
+			// Write to output, also cramp the results
 			for (int sample = 0; sample < FFT_WINDOW_SIZE; sample++) {
-				// debug_fprint(fout, "(%lf, %lf, %lf)\n", in[sample][0], in[sample][1], AMPLITUDE(in[sample][0],in[sample][1]));
-				output_buffer[sample + per*FFT_WINDOW_SIZE] = time_data[sample][0];
+				double current_time_data = round(time_data[sample][0]);
+
+				if (current_time_data > SHORT_MAX) time_data[sample][0] = SHORT_MAX;
+				if (current_time_data < SHORT_MIN) time_data[sample][0] = SHORT_MIN;
+
+				output_buffer[sample + per * FFT_WINDOW_SIZE] = (short)current_time_data;
 			}
 		}
 	}
