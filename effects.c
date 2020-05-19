@@ -92,6 +92,7 @@ void add_eq(short *input_buffer, short *output_buffer, snd_pcm_sframes_t buffer_
 			}
 
 			// Get the frequency domain values
+			// TODO: Use the FFT() code
 			fftw_execute(fft);
 
 			// From N FFT points we get N symetric frequency data
@@ -117,6 +118,7 @@ void add_eq(short *input_buffer, short *output_buffer, snd_pcm_sframes_t buffer_
 			}
 
 			// Rebuild the audio samples
+			// TODO: Use the FFT() code
 			fftw_execute(ifft);
 
 			// Write to output, also cramp the results
