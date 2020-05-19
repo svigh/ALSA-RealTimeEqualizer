@@ -26,11 +26,13 @@ int set_parameters(snd_pcm_t **handle, const char *device, int direction, int ch
 		return err;
 	}
 
+
 	if ((err = snd_pcm_hw_params_malloc(&hw_params)) < 0) {
 		fprintf(stderr, "%s (%s): cannot allocate hardware parameter structure(%s)\n",
 			device, dirname, snd_strerror(err));
 		return err;
 	}
+
 
 	if ((err = snd_pcm_hw_params_any(*handle, hw_params)) < 0) {
 		fprintf(stderr, "%s (%s): cannot initialize hardware parameter structure(%s)\n",
@@ -38,11 +40,13 @@ int set_parameters(snd_pcm_t **handle, const char *device, int direction, int ch
 		return err;
 	}
 
+
 	if ((err = snd_pcm_hw_params_set_access(*handle, hw_params, SND_PCM_ACCESS_RW_INTERLEAVED)) < 0) {
 		fprintf(stderr, "%s (%s): cannot set access type(%s)\n",
 			device, dirname, snd_strerror(err));
 		return err;
 	}
+
 
 	if ((err = snd_pcm_hw_params_set_format(*handle, hw_params, format)) < 0) {
 		fprintf(stderr, "%s (%s): cannot set sample format(%s)\n",
@@ -50,16 +54,16 @@ int set_parameters(snd_pcm_t **handle, const char *device, int direction, int ch
 		return err;
 	}
 
-	/* Set number of periods_per_buffer. Periods used to be called fragments. */
-	if ((err = snd_pcm_hw_params_set_periods_near(*handle, hw_params, &periods_per_buffer, NULL)) < 0) {
-		fprintf(stderr, "%s (%s): cannot set periods number(%s)\n",
+
+	if ((err = snd_pcm_hw_params_set_rate_near(*handle, hw_params, &rate, NULL)) < 0) {
+		fprintf(stderr, "%s (%s): cannot set sample rate(%s)\n",
 			device, dirname, snd_strerror(err));
 		return err;
 	}
 
-	/* Set number of periods_per_buffer. Periods used to be called fragments. */
-	if ((err = snd_pcm_hw_params_set_period_size_near(*handle, hw_params, &period_size, NULL)) < 0) {
-		fprintf(stderr, "%s (%s): cannot set period size(%s)\n",
+
+	if ((err = snd_pcm_hw_params_set_periods_near(*handle, hw_params, &periods_per_buffer, NULL)) < 0) {
+		fprintf(stderr, "%s (%s): cannot set periods number(%s)\n",
 			device, dirname, snd_strerror(err));
 		return err;
 	}
@@ -68,29 +72,27 @@ int set_parameters(snd_pcm_t **handle, const char *device, int direction, int ch
 	else
 		captureParams.periods_per_buffer = periods_per_buffer;
 
+
+	if ((err = snd_pcm_hw_params_set_period_size_near(*handle, hw_params, &period_size, NULL)) < 0) {
+		fprintf(stderr, "%s (%s): cannot set period size(%s)\n",
+			device, dirname, snd_strerror(err));
+		return err;
+	}
+	if (!strcmp(dirname, "PLAYBACK"))
+		playbackParams.period_size = period_size;
+	else
+		captureParams.period_size = period_size;
+
 	if ((err = snd_pcm_hw_params_set_channels(*handle, hw_params, channels)) < 0) {
 		fprintf(stderr, "%s (%s): cannot set channel count(%s)\n",
 			device, dirname, snd_strerror(err));
 		return err;
 	}
 
-	/* Set buffer size (in frames). The resulting latency is given by */
-	/* latency = periodsize * periods_per_buffer / (rate * bytes_per_frame)	  */
-	snd_pcm_uframes_t buffer_size = (period_size * periods_per_buffer)>>2;
-	if ((err = snd_pcm_hw_params_set_buffer_size_near (*handle, hw_params, &buffer_size)) < 0){
-		fprintf(stderr, "%s (%s): cannot set buffer size(%s)\n",
-		device, dirname, snd_strerror(err));
-	}
 	if (!strcmp(dirname, "PLAYBACK"))
-		playbackParams.buffer_size = buffer_size;
+		playbackParams.buffer_size = period_size * periods_per_buffer;
 	else
-		captureParams.buffer_size = buffer_size;
-
-	if ((err = snd_pcm_hw_params_set_rate_near(*handle, hw_params, &rate, NULL)) < 0) {
-		fprintf(stderr, "%s (%s): cannot set sample rate(%s)\n",
-			device, dirname, snd_strerror(err));
-		return err;
-	}
+		captureParams.buffer_size = period_size * periods_per_buffer;
 
 	if ((err = snd_pcm_hw_params(*handle, hw_params)) < 0) {
 		fprintf(stderr, "%s (%s): cannot set parameters(%s)\n",
@@ -104,6 +106,7 @@ int set_parameters(snd_pcm_t **handle, const char *device, int direction, int ch
 	else
 		captureParams.period_size = period_size;
 
+	/* latency = periodsize * periods_per_buffer / (rate * bytes_per_frame)	  */
 	snd_pcm_hw_params_get_buffer_time(hw_params, &buffer_time, &direction);	// This changes the direction, careful
 	if (!strcmp(dirname, "PLAYBACK"))
 		playbackParams.buffer_time = buffer_time;

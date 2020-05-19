@@ -1,13 +1,9 @@
 #include "effects.h"
 #include "utils.h"
 
-// TODO: Echo persistency if the echo amount is larger than the buffer_size / 2
 void add_echo(short *input_buffer, short *output_buffer, snd_pcm_sframes_t buffer_size) {
-	short *circular_buffer;
-	int circular_buffer_index = 0;
-
-	circular_buffer = malloc(ECHO_AMOUNT * sizeof(short));
-	memset(circular_buffer, 0, ECHO_AMOUNT * sizeof(short));
+	short static circular_buffer[ECHO_AMOUNT];	// Have it static if the echo amount is
+	int static circular_buffer_index = 0;		// greater than the current buffer size
 
 	for (int ch = 0; ch < CHANNELS; ch++) {
 		for (int sample = ch; sample < buffer_size / CHANNELS; sample+=CHANNELS) {
@@ -17,7 +13,6 @@ void add_echo(short *input_buffer, short *output_buffer, snd_pcm_sframes_t buffe
 			circular_buffer_index = (circular_buffer_index + 1) % ECHO_AMOUNT;
 		}
 	}
-	free(circular_buffer);
 }
 
 void add_gain(short *input_buffer, short *output_buffer, snd_pcm_sframes_t buffer_size, double gain) {
@@ -39,7 +34,7 @@ void add_gain(short *input_buffer, short *output_buffer, snd_pcm_sframes_t buffe
 void add_distort(short *input_buffer, short *output_buffer, snd_pcm_sframes_t buffer_size, double min_multiplier, double max_multiplier) {
 	short max_threshold = SHORT_MAX * min_multiplier / 100;
 	short min_threshold = SHORT_MIN * max_multiplier / 100;
-	double volume_fix_amount = ((1 + min_multiplier) + (1 + max_multiplier)) / 2;	// TODO: is average or sum better?
+	double volume_fix_amount = ((1 + min_multiplier) + (1 + max_multiplier)) / 2;
 
 	for (int ch = 0; ch < CHANNELS; ch++) {
 		for (int sample = ch; sample < buffer_size / CHANNELS; sample+=CHANNELS) {

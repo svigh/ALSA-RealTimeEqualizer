@@ -3,11 +3,11 @@
 
 pthread_mutex_t mtx = PTHREAD_MUTEX_INITIALIZER;
 
-unsigned int rate = 44100;
+unsigned int rate = RATE;
 unsigned int format = SND_PCM_FORMAT_S16_LE;
 unsigned int in_channels = CHANNELS;
 unsigned int out_channels = CHANNELS;
-int periods_per_buffer = 3;
+int periods_per_buffer = PERIODS_PER_BUFFER;
 snd_pcm_uframes_t period_size = FRAMES_PER_BUFFER * BYTES_PER_SAMPLE; //bytes
 double EQ_bands_amplitude[10] = {0};
 double gain = 0;
@@ -33,7 +33,7 @@ void *inputListener(void *vargp) {
 		// getchar();
 
 		switch (option)
-		{	// TODO: are mutexes here necessary?
+		{
 			case 49:	// 1 - Remove every effect
 				addEcho = 0;
 				addEQ = 0;
@@ -75,7 +75,6 @@ void *inputListener(void *vargp) {
 	}
 }
 
-// TODO: there is a delay between audio in and output
 int main(int argc, char **argv) {
 	int err;
 	snd_pcm_t *playback_handle, *capture_handle;
@@ -103,16 +102,9 @@ int main(int argc, char **argv) {
 		fprintf(stderr, "Cannot start CAPTURE interface(%s)\n", snd_strerror(err));
 		return err;
 	}
-extern unsigned int rate;
-extern unsigned int format;
-extern unsigned int in_channels;
-extern unsigned int out_channels;
 
-extern int periods_per_buffer;
-extern snd_pcm_uframes_t period_size;
 	print_params(captureParams);
 	print_params(playbackParams);
-
 
 	// Start the input listener thread
 	pthread_t tid;
