@@ -13,7 +13,7 @@ double EQ_bands_amplitude[10] = {0};
 double gain = 0;
 
 int addEcho = 0, addEQ = 0, addGain = 0, addDistort = 0;
-uint32_t buffer_time;
+uint32_t buffer_time_ms;
 audioParams playbackParams, captureParams;
 
 // Get the user/external input - always wait for it
@@ -142,12 +142,17 @@ int main(int argc, char **argv) {
 
 
 	// Start the audio read-process-write
+	clock_t begin, end;
+	double time_spent_ms;
 	snd_pcm_sframes_t inframes, outframes;
 	while (1) {
 		// Read line in
 		while ((inframes = snd_pcm_readi(capture_handle, read_buffer, buffer_size_in)) < 0) {
 			fprintf(stderr, "Input buffer overrun (%s)\n", strerror(inframes));
 			snd_pcm_prepare(capture_handle);
+		}
+		if (TESTING_ZONE) {	// Maybe make this an #ifdef somehow
+			begin = clock();
 		}
 		memcpy(proc_buffer, read_buffer, buffer_size_out * sizeof(short));
 
@@ -165,6 +170,11 @@ int main(int argc, char **argv) {
 
 		memcpy(write_buffer, proc_buffer, buffer_size_out * sizeof(short));
 
+		if (TESTING_ZONE) {
+			end = clock();
+			time_spent_ms = ((double)(end - begin) / CLOCKS_PER_SEC) * 100000.0;
+			printf("Time spent: %lfms/%lf ms\n", time_spent_ms, (double)captureParams.buffer_time_ms);
+		}
 		// Write to audio device
 		while ((outframes = snd_pcm_writei(playback_handle, write_buffer, inframes)) < 0) {
 			fprintf(stderr, "Output buffer underrun (%s)\n", strerror(outframes));

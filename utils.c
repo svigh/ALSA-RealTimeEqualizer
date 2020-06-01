@@ -1,8 +1,15 @@
 #include "utils.h"
 
+#ifdef TESTING
+	uint8_t TESTING_ZONE = 1;
+#else
+	uint8_t TESTING_ZONE = 0;
+#endif
+
+
 void print_params(audioParams params) {
-	printf("Direction: %s\n\tPeriods: %d\n\tPeriod size: %zu\n\tBuffer size: %zu\n\tBuffer time: %zu\n",
-		params.direction, params.periods_per_buffer, params.period_size, params.buffer_size, params.buffer_time);
+	printf("Direction: %s\n\tPeriods: %d\n\tPeriod size: %zu\n\tBuffer size: %zu\n\tBuffer time ms: %lf\n",
+		params.direction, params.periods_per_buffer, params.period_size, params.buffer_size, params.buffer_time_ms);
 }
 
 void print_byte_as_bits(char val) {
@@ -107,11 +114,11 @@ int set_parameters(snd_pcm_t **handle, const char *device, int direction, int ch
 		captureParams.period_size = period_size;
 
 	/* latency = periodsize * periods_per_buffer / (rate * bytes_per_frame)	  */
-	snd_pcm_hw_params_get_buffer_time(hw_params, &buffer_time, &direction);	// This changes the direction, careful
+	snd_pcm_hw_params_get_buffer_time(hw_params, &buffer_time_ms, &direction);	// Get buffer time in us. This changes the direction, careful
 	if (!strcmp(dirname, "PLAYBACK"))
-		playbackParams.buffer_time = buffer_time;
+		playbackParams.buffer_time_ms = (double)buffer_time_ms / 1000.0;
 	else
-		captureParams.buffer_time = buffer_time;
+		captureParams.buffer_time_ms = (double)buffer_time_ms / 1000.0;
 
 	snd_pcm_hw_params_free(hw_params);
 

@@ -10,6 +10,7 @@
 #include <math.h>
 #include <fftw3.h>
 #include <stdint.h>
+#include <time.h>						// Include if necessary
 
 //////////////////////////
 // ***AUDIO SETTINGS*** //
@@ -47,8 +48,10 @@ typedef struct{
 	char *direction;
 	snd_pcm_uframes_t period_size;
 	snd_pcm_uframes_t buffer_size;
-	uint32_t buffer_time;
+	double buffer_time_ms;				// PRECULATED BY ALSA, IN ms => buffer_time_ms = buffer_size / rate
 }audioParams;
+
+extern uint8_t TESTING_ZONE;
 
 extern pthread_mutex_t mtx;
 
@@ -61,7 +64,7 @@ extern unsigned int out_channels;
 extern int periods_per_buffer;
 extern snd_pcm_uframes_t period_size;
 
-extern uint32_t buffer_time;
+extern uint32_t buffer_time_ms;
 extern audioParams playbackParams, captureParams;
 
 extern double EQ_bands_amplitude[10];	// The amount in dB on how much each band needs to be modified
@@ -69,6 +72,7 @@ extern double gain;
 
 void print_params(audioParams params);
 void print_byte_as_bits(char val);
+int msleep(long msec);
 int set_parameters(snd_pcm_t **handle, const char *device, int direction, int channels);
 void FFT(short int dir, long m, double *reals, double *imags);
 

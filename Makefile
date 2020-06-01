@@ -1,5 +1,6 @@
 CXX_FLAGS=-lasound -w -Wall -lpthread -lfftw3 -lm
 CXX=gcc
+TESTING=-DTESTING
 # TODO: Add INCLUDE var for the other source files
 
 .PHONY: clean run build all
@@ -10,7 +11,12 @@ run:
 build:
 	$(CXX) -o playback playback.c utils.c effects.c $(CXX_FLAGS)
 
+build_testing:
+	$(CXX) -o playback playback.c utils.c effects.c $(CXX_FLAGS) $(TESTING)
+
 all: build run
+
+all_testing: build_testing run
 
 clean:
 	rm playback
