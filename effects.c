@@ -1,51 +1,48 @@
 #include "effects.h"
 #include "utils.h"
 
-void add_echo(short *input_buffer, short *output_buffer, snd_pcm_sframes_t buffer_size) {
+// WIP: Should echo be influenced by channels?
+void add_echo(short *input_buffer, short *output_buffer, int buffer_size) {
 	short static circular_buffer[ECHO_AMOUNT];	// Have it static if the echo amount is
 	int static circular_buffer_index = 0;		// greater than the current buffer size
 
-	for (int ch = 0; ch < CHANNELS; ch++) {
-		for (int sample = ch; sample < buffer_size / CHANNELS; sample+=CHANNELS) {
-			output_buffer[sample] = (input_buffer[sample] / 2) + (circular_buffer[circular_buffer_index] / 2);
-			circular_buffer[circular_buffer_index] = output_buffer[sample];
+	for (int sample = 0; sample < buffer_size; sample++) {
+		output_buffer[sample] = (input_buffer[sample] / 2) + (circular_buffer[circular_buffer_index] / 2);
+		circular_buffer[circular_buffer_index] = output_buffer[sample];
 
-			circular_buffer_index = (circular_buffer_index + 1) % ECHO_AMOUNT;
-		}
+		circular_buffer_index = (circular_buffer_index + 1) % ECHO_AMOUNT;
 	}
 }
 
-void add_gain(short *input_buffer, short *output_buffer, snd_pcm_sframes_t buffer_size, double gain) {
-	for (int ch = 0; ch < CHANNELS; ch++) {
-		for (int sample = ch; sample < buffer_size / CHANNELS; sample+=CHANNELS) {
-			if ((input_buffer[sample] * gain) > SHORT_MAX) {
-				output_buffer[sample] = SHORT_MAX;
+// No need for gain to have per channel split
+void add_gain(short *input_buffer, short *output_buffer, int buffer_size, double gain) {
+	for (int sample = 0; sample < buffer_size; sample++) {
+		if ((input_buffer[sample] * gain) > SHORT_MAX) {
+			output_buffer[sample] = SHORT_MAX;
+		} else {
+			if ((input_buffer[sample] * gain) < SHORT_MIN) {
+				output_buffer[sample] = SHORT_MIN;
 			} else {
-				if ((input_buffer[sample] * gain) < SHORT_MIN) {
-					output_buffer[sample] = SHORT_MIN;
-				} else {
-					output_buffer[sample] = input_buffer[sample] * gain;
-				}
+				output_buffer[sample] = input_buffer[sample] * gain;
 			}
 		}
 	}
 }
 
-void add_distort(short *input_buffer, short *output_buffer, snd_pcm_sframes_t buffer_size, double min_multiplier, double max_multiplier) {
+// No need for distort to have per channel split
+void add_distort(short *input_buffer, short *output_buffer, int buffer_size, double min_multiplier, double max_multiplier) {
 	short max_threshold = SHORT_MAX * min_multiplier / 100;
 	short min_threshold = SHORT_MIN * max_multiplier / 100;
 	double volume_fix_amount = ((1 + min_multiplier) + (1 + max_multiplier)) / 2;
 
-	for (int ch = 0; ch < CHANNELS; ch++) {
-		for (int sample = ch; sample < buffer_size / CHANNELS; sample+=CHANNELS) {
-			if (input_buffer[sample] < min_threshold) {
-				output_buffer[sample] = min_threshold;
+	for (int sample = 0; sample < buffer_size; sample++) {
+		if (input_buffer[sample] < min_threshold) {
+			output_buffer[sample] = min_threshold;
+		} else {
+			if (input_buffer[sample] > max_threshold) {
+				output_buffer[sample] = max_threshold;
 			} else {
-				if (input_buffer[sample] > max_threshold) {
-					output_buffer[sample] = max_threshold;
-				} else {
-					output_buffer[sample] = input_buffer[sample];
-				}
+				output_buffer[sample] = input_buffer[sample];
 			}
 		}
 	}
@@ -54,10 +51,9 @@ void add_distort(short *input_buffer, short *output_buffer, snd_pcm_sframes_t bu
 	add_gain(input_buffer, output_buffer, buffer_size, volume_fix_amount);
 }
 
-// TODO: Add calculation of the frequency values affected
-void add_eq(short *input_buffer, short *output_buffer, snd_pcm_sframes_t buffer_size) {
+// Nice-to-have: Add calculation of the frequency values affected
+void add_eq(short *input_buffer, short *output_buffer, int buffer_size) {
 	// From the GUI input - get the bands amplitudes to use to modify each band
-	pthread_mutex_lock(&mtx);
 		FILE *f = fopen("eq_vals.txt", "r");
 		if (!f) {
 			fprintf(stderr, "Could not open EQ files.\n");
@@ -67,7 +63,6 @@ void add_eq(short *input_buffer, short *output_buffer, snd_pcm_sframes_t buffer_
 			fscanf(f, "%lf", &EQ_bands_amplitude[i]);
 		}
 		fclose(f);
-	pthread_mutex_unlock(&mtx);
 
 	// Buffers to keep the audio data and frequency data
 	fftw_complex *time_data = (fftw_complex*) fftw_malloc(sizeof(fftw_complex) * FFT_WINDOW_SIZE);
@@ -83,12 +78,11 @@ void add_eq(short *input_buffer, short *output_buffer, snd_pcm_sframes_t buffer_
 	///////////////////////////////////////////////////////////
 	double mux = 1.0 / FFT_WINDOW_SIZE;
 
-	for (int ch = 0; ch < CHANNELS; ch++) {
-		for (int per = ch; per < buffer_size / FFT_WINDOW_SIZE; per+=CHANNELS) {
-
-			for(int sample = 0; sample < FFT_WINDOW_SIZE; sample++) {
-				time_data[sample][0] = input_buffer[sample + per * FFT_WINDOW_SIZE];
-				time_data[sample][1] = 0;
+	for (int slice = 0; slice < buffer_size / (FFT_WINDOW_SIZE * CHANNELS); slice++) {
+		for (int ch = 0; ch < CHANNELS; ch++) {
+			for(int sample = ch, fft_sample = 0; sample < FFT_WINDOW_SIZE * CHANNELS; sample+=CHANNELS, fft_sample++) {
+				time_data[fft_sample][0] = input_buffer[sample + slice * FFT_WINDOW_SIZE * CHANNELS];
+				time_data[fft_sample][1] = 0;
 			}
 
 			// Get the frequency domain values
@@ -122,13 +116,13 @@ void add_eq(short *input_buffer, short *output_buffer, snd_pcm_sframes_t buffer_
 			fftw_execute(ifft);
 
 			// Write to output, also cramp the results
-			for (int sample = 0; sample < FFT_WINDOW_SIZE; sample++) {
-				double current_time_data = round(time_data[sample][0]);
+			for(int sample = ch, fft_sample = 0; sample < FFT_WINDOW_SIZE * CHANNELS; sample+=CHANNELS, fft_sample++) {
+				double current_time_data = round(time_data[fft_sample][0]);
 
-				if (current_time_data > SHORT_MAX) time_data[sample][0] = SHORT_MAX;
-				if (current_time_data < SHORT_MIN) time_data[sample][0] = SHORT_MIN;
+				if (current_time_data > SHORT_MAX) time_data[fft_sample][0] = SHORT_MAX;
+				if (current_time_data < SHORT_MIN) time_data[fft_sample][0] = SHORT_MIN;
 
-				output_buffer[sample + per * FFT_WINDOW_SIZE] = (short)current_time_data;
+				output_buffer[sample + slice * FFT_WINDOW_SIZE * CHANNELS] = (short)current_time_data;
 			}
 		}
 	}

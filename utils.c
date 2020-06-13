@@ -8,8 +8,8 @@
 
 
 void print_params(audioParams params) {
-	printf("Direction: %s\n\tPeriods: %d\n\tPeriod size: %zu\n\tBuffer size: %zu\n\tBuffer time ms: %lf\n",
-		params.direction, params.periods_per_buffer, params.period_size, params.buffer_size, params.buffer_time_ms);
+	printf("Direction: %s\n\tPeriods: %d\n\tPeriod size: %zu\n\tChannels: %d\n\tBuffer size: %zu\n\tBuffer time ms: %lf\n",
+		params.direction, params.periods_per_buffer, params.period_size, params.channels, params.buffer_size, params.buffer_time_ms);
 }
 
 void print_byte_as_bits(char val) {
@@ -97,9 +97,14 @@ int set_parameters(snd_pcm_t **handle, const char *device, int direction, int ch
 	}
 
 	if (!strcmp(dirname, "PLAYBACK"))
-		playbackParams.buffer_size = period_size * periods_per_buffer;
+		snd_pcm_hw_params_get_channels(hw_params, &playbackParams.channels);
 	else
-		captureParams.buffer_size = period_size * periods_per_buffer;
+		snd_pcm_hw_params_get_channels(hw_params, &captureParams.channels);
+
+	if (!strcmp(dirname, "PLAYBACK"))
+		snd_pcm_hw_params_get_buffer_size(hw_params, &playbackParams.buffer_size);
+	else
+		snd_pcm_hw_params_get_buffer_size(hw_params, &captureParams.buffer_size);
 
 	if ((err = snd_pcm_hw_params(*handle, hw_params)) < 0) {
 		fprintf(stderr, "%s (%s): cannot set parameters(%s)\n",

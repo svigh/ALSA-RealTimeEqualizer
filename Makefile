@@ -1,4 +1,5 @@
 CXX_FLAGS=-lasound -w -Wall -lpthread -lfftw3 -lm
+# CXX=~/Downloads/gcc-linaro-7.5.0-2019.12-i686_aarch64-linux-gnu/bin/aarch64-linux-gnu-gcc
 CXX=gcc
 TESTING=-DTESTING
 # TODO: Add INCLUDE var for the other source files

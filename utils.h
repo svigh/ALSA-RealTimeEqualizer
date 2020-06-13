@@ -18,10 +18,10 @@
 #define PLAYBACK_DEVICE "default"		// Let the system pick the wanted output
 #define CAPTURE_DEVICE  "plughw:0,0"	// Set the line device you are recording from
 #define RATE 44100
-#define CHANNELS 1						// TODO: distorted sound when using 2 channels
-#define PERIODS_PER_BUFFER 3
+#define CHANNELS 2						// TODO: distorted sound when using 2 channels
+#define PERIODS_PER_BUFFER 4
 #define BYTES_PER_SAMPLE 2
-#define FRAMES_PER_BUFFER 1024
+#define FRAMES_PER_BUFFER 2^4 * FFT_WINDOW_SIZE
 
 /////////////////
 // ***UTILS*** //
@@ -46,14 +46,13 @@
 typedef struct{
 	int periods_per_buffer;
 	char *direction;
+	int channels;
 	snd_pcm_uframes_t period_size;
 	snd_pcm_uframes_t buffer_size;
 	double buffer_time_ms;				// PRECULATED BY ALSA, IN ms => buffer_time_ms = buffer_size / rate
 }audioParams;
 
 extern uint8_t TESTING_ZONE;
-
-extern pthread_mutex_t mtx;
 
 // TODO: make these parameterized
 extern unsigned int rate;

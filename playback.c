@@ -1,8 +1,6 @@
 #include "utils.h"
 #include "effects.h"
 
-pthread_mutex_t mtx = PTHREAD_MUTEX_INITIALIZER;
-
 unsigned int rate = RATE;
 unsigned int format = SND_PCM_FORMAT_S16_LE;
 unsigned int in_channels = CHANNELS;
@@ -115,9 +113,9 @@ int main(int argc, char **argv) {
 
 
 	// Input, processing and output buffers are the size of a reading buffer * sample size (short)
-	uint32_t buffer_size_in  = captureParams.buffer_size ;
+	uint32_t buffer_size_in  = captureParams.buffer_size * CHANNELS;
 		printf("In buffer size: %d\n", buffer_size_in);
-	uint32_t buffer_size_out = playbackParams.buffer_size;
+	uint32_t buffer_size_out = playbackParams.buffer_size * CHANNELS;
 		printf("Out buffer size: %d\n", buffer_size_out);
 
 
@@ -146,27 +144,29 @@ int main(int argc, char **argv) {
 	double time_spent_ms;
 	snd_pcm_sframes_t inframes, outframes;
 	while (1) {
-		// Read line in
-		while ((inframes = snd_pcm_readi(capture_handle, read_buffer, buffer_size_in)) < 0) {
+		// Read line in	| because we specify the number of frames, not memory size to read ---v
+		while ((inframes = snd_pcm_readi(capture_handle, read_buffer, buffer_size_in / CHANNELS)) < 0) {
 			fprintf(stderr, "Input buffer overrun (%s)\n", strerror(inframes));
 			snd_pcm_prepare(capture_handle);
 		}
+		int read_buffer_size = inframes * CHANNELS;	// This can also be buffer_size_in, but what if inframes is different? Is it possible?
+
 		if (TESTING_ZONE) {	// Maybe make this an #ifdef somehow
 			begin = clock();
 		}
 		memcpy(proc_buffer, read_buffer, buffer_size_out * sizeof(short));
 
 		if (addEQ)
-			add_eq(read_buffer, proc_buffer, inframes);
+			add_eq(read_buffer, proc_buffer, read_buffer_size);
 
 		if (addGain)
-			add_gain(proc_buffer, proc_buffer, inframes, gain);
+			add_gain(proc_buffer, proc_buffer, read_buffer_size, gain);
 
 		if (addEcho)
-			add_echo(proc_buffer, proc_buffer, inframes);
+			add_echo(proc_buffer, proc_buffer, read_buffer_size);
 
 		if (addDistort)
-			add_distort(proc_buffer, proc_buffer, inframes, 0.9, 0.5);
+			add_distort(proc_buffer, proc_buffer, read_buffer_size, 0.9, 0.5);
 
 		memcpy(write_buffer, proc_buffer, buffer_size_out * sizeof(short));
 
