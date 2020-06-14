@@ -104,7 +104,7 @@ class Handler:
 
 
 builder = Gtk.Builder()
-builder.add_from_file("notebook-pages.glade")
+builder.add_from_file("user-interface.glade")
 builder.connect_signals(Handler())
 main_window = builder.get_object("MainWindow")
 
