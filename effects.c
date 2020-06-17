@@ -1,7 +1,6 @@
 #include "effects.h"
 #include "utils.h"
 
-// WIP: Should echo be influenced by channels?
 void add_echo(short *input_buffer, short *output_buffer, int buffer_size) {
 	short static circular_buffer[ECHO_AMOUNT];	// Have it static if the echo amount is
 	int static circular_buffer_index = 0;		// greater than the current buffer size
@@ -59,7 +58,7 @@ void add_eq(short *input_buffer, short *output_buffer, int buffer_size) {
 			fprintf(stderr, "Could not open EQ files.\n");
 			return;
 		}
-		for (int i = 0; i < 10; i++) {
+		for (int i = 0; i < NUM_EQ_BANDS; i++) {
 			fscanf(f, "%lf", &EQ_bands_amplitude[i]);
 		}
 		fclose(f);
@@ -93,13 +92,17 @@ void add_eq(short *input_buffer, short *output_buffer, int buffer_size) {
 			// First frequency value doesnt matter for us(DC offset and carries no frequency dependent information)
 			// 1 - N/2 are relevant frequencies
 			// MODIFY THE FREQUENCIES ACCORDINGLY
-			int band = NUM_EQ_BANDS;
+			int band = NUM_EQ_BANDS - 1;
 			for (int sample = 1; sample <= (FFT_WINDOW_SIZE / 2); sample++, band--) {
 				freq_data[sample][0] *= dB_TO_LINEAR(EQ_bands_amplitude[band]);
 				freq_data[sample][1] *= dB_TO_LINEAR(EQ_bands_amplitude[band]);
 			}
 
 			// FOR THE MIRRORED PART OF THE FREQUENCY DATA
+			// BECAUSE THE MIDDLE IS MIRRORED V SO SKIP MODIFYING IT TWICE
+			if (FFT_WINDOW_SIZE % 2 == 0) band++;band++;
+			// BECAUSE FIRST LOOP DECREMENTS TOO MUCH ^
+
 			for (int sample = ((FFT_WINDOW_SIZE / 2) + 1); sample < FFT_WINDOW_SIZE; sample++, band++) {
 				freq_data[sample][0] *= dB_TO_LINEAR(EQ_bands_amplitude[band]);
 				freq_data[sample][1] *= dB_TO_LINEAR(EQ_bands_amplitude[band]);

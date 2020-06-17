@@ -6,6 +6,12 @@
 	uint8_t TESTING_ZONE = 0;
 #endif
 
+unsigned int rate = RATE;
+unsigned int format = SND_PCM_FORMAT_S16_LE;
+unsigned int in_channels = CHANNELS;
+unsigned int out_channels = CHANNELS;
+int periods_per_buffer = PERIODS_PER_BUFFER;
+snd_pcm_uframes_t period_size = FRAMES_PER_BUFFER * BYTES_PER_SAMPLE; //bytes
 
 void print_params(audioParams params) {
 	printf("Direction: %s\n\tPeriods: %d\n\tPeriod size: %zu\n\tChannels: %d\n\tBuffer size: %zu\n\tBuffer time ms: %lf\n",
@@ -74,6 +80,8 @@ int set_parameters(snd_pcm_t **handle, const char *device, int direction, int ch
 			device, dirname, snd_strerror(err));
 		return err;
 	}
+
+
 	if (!strcmp(dirname, "PLAYBACK"))
 		playbackParams.periods_per_buffer = periods_per_buffer;
 	else
@@ -85,10 +93,13 @@ int set_parameters(snd_pcm_t **handle, const char *device, int direction, int ch
 			device, dirname, snd_strerror(err));
 		return err;
 	}
+
+
 	if (!strcmp(dirname, "PLAYBACK"))
 		playbackParams.period_size = period_size;
 	else
 		captureParams.period_size = period_size;
+
 
 	if ((err = snd_pcm_hw_params_set_channels(*handle, hw_params, channels)) < 0) {
 		fprintf(stderr, "%s (%s): cannot set channel count(%s)\n",
@@ -96,15 +107,18 @@ int set_parameters(snd_pcm_t **handle, const char *device, int direction, int ch
 		return err;
 	}
 
+
 	if (!strcmp(dirname, "PLAYBACK"))
 		snd_pcm_hw_params_get_channels(hw_params, &playbackParams.channels);
 	else
 		snd_pcm_hw_params_get_channels(hw_params, &captureParams.channels);
 
+
 	if (!strcmp(dirname, "PLAYBACK"))
 		snd_pcm_hw_params_get_buffer_size(hw_params, &playbackParams.buffer_size);
 	else
 		snd_pcm_hw_params_get_buffer_size(hw_params, &captureParams.buffer_size);
+
 
 	if ((err = snd_pcm_hw_params(*handle, hw_params)) < 0) {
 		fprintf(stderr, "%s (%s): cannot set parameters(%s)\n",
@@ -112,12 +126,15 @@ int set_parameters(snd_pcm_t **handle, const char *device, int direction, int ch
 		return err;
 	}
 
+
 	snd_pcm_hw_params_get_period_size(hw_params, &period_size, &direction);
 	if (!strcmp(dirname, "PLAYBACK"))
 		playbackParams.period_size = period_size;
 	else
 		captureParams.period_size = period_size;
 
+
+	uint32_t buffer_time_ms;
 	/* latency = periodsize * periods_per_buffer / (rate * bytes_per_frame)	  */
 	snd_pcm_hw_params_get_buffer_time(hw_params, &buffer_time_ms, &direction);	// Get buffer time in us. This changes the direction, careful
 	if (!strcmp(dirname, "PLAYBACK"))
@@ -125,74 +142,8 @@ int set_parameters(snd_pcm_t **handle, const char *device, int direction, int ch
 	else
 		captureParams.buffer_time_ms = (double)buffer_time_ms / 1000.0;
 
+
 	snd_pcm_hw_params_free(hw_params);
 
 	return 0;
-}
-
-void FFT(short int dir, long m, double *reals, double *imags) {
-	long n,i,i1,j,k,i2,l,l1,l2;
-	double c1,c2,tx,ty,t1,t2,u1,u2,z;
-
-	/* Calculate the number of points */
-	n = 1;
-	for (i = 0; i < m; i++)
-		n *= 2;
-
-	/* Do the bit reversal */
-	i2 = n >> 1;
-	j = 0;
-	for (i = 0; i < n-1; i++) {
-		if (i < j) {
-			tx = reals[i];
-			ty = imags[i];
-			reals[i] = reals[j];
-			imags[i] = imags[j];
-			reals[j] = tx;
-			imags[j] = ty;
-		}
-		k = i2;
-		while (k <= j) {
-			j -= k;
-			k >>= 1;
-		}
-		j += k;
-	}
-
-	/* Compute the FFT */
-	c1 = -1.0;
-	c2 = 0.0;
-	l2 = 1;
-	for (l = 0; l < m; l++) {
-		l1 = l2;
-		l2 <<= 1;
-		u1 = 1.0;
-		u2 = 0.0;
-		for (j = 0; j < l1; j++) {
-			for (i = j; i < n; i+=l2) {
-				i1 = i + l1;
-				t1 = u1 * reals[i1] - u2 * imags[i1];
-				t2 = u1 * imags[i1] + u2 * reals[i1];
-				reals[i1] = reals[i] - t1;
-				imags[i1] = imags[i] - t2;
-				reals[i] += t1;
-				imags[i] += t2;
-			}
-			z  = u1 * c1 - u2 * c2;
-			u2 = u1 * c2 + u2 * c1;
-			u1 = z;
-		}
-		c2 = sqrt((1.0 - c1) / 2.0);
-		if (dir == 1)
-			c2 = -c2;
-		c1 = sqrt((1.0 + c1) / 2.0);
-	}
-
-	/* Scaling for forward transform */
-	if (dir == 1) {
-		for (i = 0; i < n; i++) {
-			reals[i] /= n;
-			imags[i] /= n;
-		}
-	}
 }

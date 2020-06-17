@@ -1,17 +1,10 @@
 #include "utils.h"
 #include "effects.h"
 
-unsigned int rate = RATE;
-unsigned int format = SND_PCM_FORMAT_S16_LE;
-unsigned int in_channels = CHANNELS;
-unsigned int out_channels = CHANNELS;
-int periods_per_buffer = PERIODS_PER_BUFFER;
-snd_pcm_uframes_t period_size = FRAMES_PER_BUFFER * BYTES_PER_SAMPLE; //bytes
 double EQ_bands_amplitude[10] = {0};
 double gain = 0;
 
 int addEcho = 0, addEQ = 0, addGain = 0, addDistort = 0;
-uint32_t buffer_time_ms;
 audioParams playbackParams, captureParams;
 
 // Get the user/external input - always wait for it
@@ -112,7 +105,7 @@ int main(int argc, char **argv) {
 	}
 
 
-	// Input, processing and output buffers are the size of a reading buffer * sample size (short)
+	// Input, processing and output buffers are the size of a reading buffer * sample size (sample_size = bytes/sample * CHANNELS)
 	uint32_t buffer_size_in  = captureParams.buffer_size * CHANNELS;
 		printf("In buffer size: %d\n", buffer_size_in);
 	uint32_t buffer_size_out = playbackParams.buffer_size * CHANNELS;

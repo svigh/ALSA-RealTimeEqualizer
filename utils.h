@@ -18,10 +18,10 @@
 #define PLAYBACK_DEVICE "default"		// Let the system pick the wanted output
 #define CAPTURE_DEVICE  "plughw:0,0"	// Set the line device you are recording from
 #define RATE 44100
-#define CHANNELS 2						// TODO: distorted sound when using 2 channels
-#define PERIODS_PER_BUFFER 4
+#define CHANNELS 2
+#define PERIODS_PER_BUFFER 3
 #define BYTES_PER_SAMPLE 2
-#define FRAMES_PER_BUFFER 2^4 * FFT_WINDOW_SIZE
+#define FRAMES_PER_BUFFER 256
 
 /////////////////
 // ***UTILS*** //
@@ -34,7 +34,7 @@
 // ***EFFECTS SETTINGS*** //
 ////////////////////////////
 #define NUM_EQ_BANDS 10
-#define FFT_WINDOW_SIZE (NUM_EQ_BANDS * 2 + 1)	// To get 10 relevant frequency data { 0R; [1; N/2]-freq; (N/2; N) - mirrored freq }
+#define FFT_WINDOW_SIZE (NUM_EQ_BANDS * 2)	// To get 10 relevant frequency data { 0R; [1; N/2]-freq; (N/2; N) - mirrored freq }
 #define AMPLITUDE(x,y) sqrt((double)(x*x) + (y*y))
 #define dB_TO_LINEAR(x) pow(2, x / 6)
 #define ECHO_AMOUNT 4096				// How many frames/samples of echo
@@ -71,8 +71,6 @@ extern double gain;
 
 void print_params(audioParams params);
 void print_byte_as_bits(char val);
-int msleep(long msec);
 int set_parameters(snd_pcm_t **handle, const char *device, int direction, int channels);
-void FFT(short int dir, long m, double *reals, double *imags);
 
 #endif

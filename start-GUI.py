@@ -65,7 +65,6 @@ class Handler:
 		EQ_bands[0] = Scale_0.get_value()
 		write_eq_vals_to_file()
 
-
 	def Scale_1_value_changed(self, scale):
 		EQ_bands[1] = Scale_1.get_value()
 		write_eq_vals_to_file()
