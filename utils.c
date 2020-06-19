@@ -1,11 +1,5 @@
 #include "utils.h"
 
-#ifdef TESTING
-	uint8_t TESTING_ZONE = 1;
-#else
-	uint8_t TESTING_ZONE = 0;
-#endif
-
 unsigned int rate = RATE;
 unsigned int format = SND_PCM_FORMAT_S16_LE;
 unsigned int in_channels = CHANNELS;

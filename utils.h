@@ -29,6 +29,8 @@
 #define SHORT_MAX 32767
 #define SHORT_MIN -32767
 #define PI 3.141592
+#define BUFFER_COUNT 100
+#define uS_IN_MS 100000.0
 
 ////////////////////////////
 // ***EFFECTS SETTINGS*** //
@@ -43,7 +45,7 @@
 #define debug_print printf				// So later it can be quickly removed
 #define debug_fprint fprintf			// So later it can be quickly removed
 
-typedef struct{
+typedef struct {
 	int periods_per_buffer;
 	char *direction;
 	int channels;
@@ -52,7 +54,6 @@ typedef struct{
 	double buffer_time_ms;				// PRECULATED BY ALSA, IN ms => buffer_time_ms = buffer_size / rate
 }audioParams;
 
-extern uint8_t TESTING_ZONE;
 
 // TODO: make these parameterized
 extern unsigned int rate;
