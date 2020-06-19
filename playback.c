@@ -134,7 +134,9 @@ int main(int argc, char **argv) {
 
 	// Start the audio read-process-write
 	clock_t begin, end;
-	double time_spent_ms;
+	double current_time_spent_ms, average_time_ms;
+	double recorded_times[BUFFER_COUNT] = {0.0}; int recording_index = 0;
+
 	snd_pcm_sframes_t inframes, outframes;
 	while (1) {
 		// Read line in	| because we specify the number of frames, not memory size to read ---v
@@ -144,9 +146,10 @@ int main(int argc, char **argv) {
 		}
 		int read_buffer_size = inframes * CHANNELS;	// This can also be buffer_size_in, but what if inframes is different? Is it possible?
 
-		if (TESTING_ZONE) {	// Maybe make this an #ifdef somehow
-			begin = clock();
-		}
+#ifdef TESTING
+	begin = clock();
+#endif
+
 		memcpy(proc_buffer, read_buffer, buffer_size_out * sizeof(short));
 
 		if (addEQ)
@@ -163,11 +166,23 @@ int main(int argc, char **argv) {
 
 		memcpy(write_buffer, proc_buffer, buffer_size_out * sizeof(short));
 
-		if (TESTING_ZONE) {
-			end = clock();
-			time_spent_ms = ((double)(end - begin) / CLOCKS_PER_SEC) * 100000.0;
-			printf("Time spent: %lfms/%lf ms\n", time_spent_ms, (double)captureParams.buffer_time_ms);
-		}
+#ifdef TESTING
+	end = clock();
+
+	current_time_spent_ms = ((double)(end - begin) / CLOCKS_PER_SEC) * uS_IN_MS;
+	recorded_times[recording_index++] = current_time_spent_ms;
+
+	for (int i = 0; i < BUFFER_COUNT; i++) {
+		average_time_ms += recorded_times[i];
+	}
+
+	average_time_ms /= BUFFER_COUNT;
+	printf("Average time spent last %d buffers: %lfms/%lf ms\n",
+				BUFFER_COUNT, average_time_ms, (double)captureParams.buffer_time_ms);
+
+	recording_index %= BUFFER_COUNT;
+#endif
+
 		// Write to audio device
 		while ((outframes = snd_pcm_writei(playback_handle, write_buffer, inframes)) < 0) {
 			fprintf(stderr, "Output buffer underrun (%s)\n", strerror(outframes));
