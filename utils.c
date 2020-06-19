@@ -132,9 +132,9 @@ int set_parameters(snd_pcm_t **handle, const char *device, int direction, int ch
 	/* latency = periodsize * periods_per_buffer / (rate * bytes_per_frame)	  */
 	snd_pcm_hw_params_get_buffer_time(hw_params, &buffer_time_ms, &direction);	// Get buffer time in us. This changes the direction, careful
 	if (!strcmp(dirname, "PLAYBACK"))
-		playbackParams.buffer_time_ms = (double)buffer_time_ms / 1000.0;
+		playbackParams.buffer_time_ms = (double)buffer_time_ms / (double)uS_IN_MS;
 	else
-		captureParams.buffer_time_ms = (double)buffer_time_ms / 1000.0;
+		captureParams.buffer_time_ms = (double)buffer_time_ms / (double)uS_IN_MS;
 
 
 	snd_pcm_hw_params_free(hw_params);

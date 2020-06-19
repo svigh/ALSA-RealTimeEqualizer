@@ -133,7 +133,7 @@ int main(int argc, char **argv) {
 
 
 	// Start the audio read-process-write
-	clock_t begin, end;
+	struct timeval tval_before, tval_after, tval_result;
 	double current_time_spent_ms, average_time_ms;
 	double recorded_times[BUFFER_COUNT] = {0.0}; int recording_index = 0;
 
@@ -147,7 +147,7 @@ int main(int argc, char **argv) {
 		int read_buffer_size = inframes * CHANNELS;	// This can also be buffer_size_in, but what if inframes is different? Is it possible?
 
 #ifdef TESTING
-	begin = clock();
+	gettimeofday(&tval_before, NULL);
 #endif
 
 		memcpy(proc_buffer, read_buffer, buffer_size_out * sizeof(short));
@@ -167,9 +167,11 @@ int main(int argc, char **argv) {
 		memcpy(write_buffer, proc_buffer, buffer_size_out * sizeof(short));
 
 #ifdef TESTING
-	end = clock();
+	gettimeofday(&tval_after, NULL);
+	timersub(&tval_after, &tval_before, &tval_result);
 
-	current_time_spent_ms = ((double)(end - begin) / CLOCKS_PER_SEC) * uS_IN_MS;
+	current_time_spent_ms = (double)tval_result.tv_usec / uS_IN_MS;
+
 	recorded_times[recording_index++] = current_time_spent_ms;
 
 	for (int i = 0; i < BUFFER_COUNT; i++) {
@@ -177,8 +179,8 @@ int main(int argc, char **argv) {
 	}
 
 	average_time_ms /= BUFFER_COUNT;
-	printf("Average time spent last %d buffers: %lfms/%lf ms\n",
-				BUFFER_COUNT, average_time_ms, (double)captureParams.buffer_time_ms);
+	printf("Average time spent last %d buffers: %lf ms/%lf ms\n",
+				BUFFER_COUNT, average_time_ms, (double)captureParams.buffer_time_ms / captureParams.periods_per_buffer);
 
 	recording_index %= BUFFER_COUNT;
 #endif

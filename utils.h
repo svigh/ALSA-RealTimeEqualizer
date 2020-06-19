@@ -10,7 +10,7 @@
 #include <math.h>
 #include <fftw3.h>
 #include <stdint.h>
-#include <time.h>						// Include if necessary
+#include <sys/time.h>						// Include if necessary
 
 //////////////////////////
 // ***AUDIO SETTINGS*** //
@@ -21,7 +21,7 @@
 #define CHANNELS 2
 #define PERIODS_PER_BUFFER 3
 #define BYTES_PER_SAMPLE 2
-#define FRAMES_PER_BUFFER 256
+#define FRAMES_PER_BUFFER 128
 
 /////////////////
 // ***UTILS*** //
@@ -30,7 +30,7 @@
 #define SHORT_MIN -32767
 #define PI 3.141592
 #define BUFFER_COUNT 100
-#define uS_IN_MS 100000.0
+#define uS_IN_MS 1000
 
 ////////////////////////////
 // ***EFFECTS SETTINGS*** //
