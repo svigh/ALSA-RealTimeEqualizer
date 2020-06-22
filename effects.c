@@ -1,6 +1,8 @@
 #include "effects.h"
 #include "utils.h"
 
+double EQ_bands_amplitude[NUM_EQ_BANDS] = {0};
+
 void add_echo(short *input_buffer, short *output_buffer, int buffer_size) {
 	short static circular_buffer[ECHO_AMOUNT];	// Have it static if the echo amount is
 	int static circular_buffer_index = 0;		// greater than the current buffer size

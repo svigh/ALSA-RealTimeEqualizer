@@ -18,7 +18,7 @@
 #define PLAYBACK_DEVICE "default"		// Let the system pick the wanted output
 #define CAPTURE_DEVICE  "plughw:0,0"	// Set the line device you are recording from
 #define RATE 44100
-#define CHANNELS 1
+#define CHANNELS 2
 #define PERIODS_PER_BUFFER 3
 #define BYTES_PER_SAMPLE 2
 #define FRAMES_PER_BUFFER 128
@@ -67,7 +67,7 @@ extern snd_pcm_uframes_t period_size;
 extern uint32_t buffer_time_ms;
 extern audioParams playbackParams, captureParams;
 
-extern double EQ_bands_amplitude[10];	// The amount in dB on how much each band needs to be modified
+extern double EQ_bands_amplitude[NUM_EQ_BANDS];	// The amount in dB on how much each band needs to be modified
 extern double gain;
 
 void print_params(audioParams params);

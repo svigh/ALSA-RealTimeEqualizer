@@ -8,7 +8,7 @@ AUDIO_COMPILE_CMD = "gcc -Wall -o playback playback.c utils.c effects.c -lasound
 NUM_EQ_BANDS = 10
 EQ_VALS_FILE = "eq_vals.txt"
 
-EQ_bands = [0 for x in range(NUM_EQ_BANDS)]
+EQ_bands = [1 for x in range(NUM_EQ_BANDS)]
 EQ_format = "%s %s %s %s %s %s %s %s %s %s"
 
 

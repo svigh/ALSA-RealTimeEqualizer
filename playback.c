@@ -1,7 +1,6 @@
 #include "utils.h"
 #include "effects.h"
 
-double EQ_bands_amplitude[10] = {0};
 double gain = 0;
 
 int addEcho = 0, addEQ = 0, addGain = 0, addDistort = 0;
@@ -78,12 +77,6 @@ int main(int argc, char **argv) {
 		return err;
 	}
 
-	// TODO: if there is a way to do this it could help with parameters being the same
-	// if ((err = snd_pcm_link(capture_handle, playback_handle)) < 0) {
-	// 	fprintf(stderr, "Cannot link handles(%s)\n", snd_strerror(err));
-	// 	return err;
-	// }
-
 	if ((err = snd_pcm_prepare(playback_handle)) < 0) {
 		fprintf(stderr, "Cannot prepare PLAYBACK interface(%s)\n", snd_strerror(err));
 		return err;
@@ -106,18 +99,18 @@ int main(int argc, char **argv) {
 
 
 	// Input, processing and output buffers are the size of a reading buffer * sample size (sample_size = bytes/sample * CHANNELS)
-	uint32_t buffer_size_in  = captureParams.buffer_size * CHANNELS;
-		printf("In buffer size: %d\n", buffer_size_in);
-	uint32_t buffer_size_out = playbackParams.buffer_size * CHANNELS;
-		printf("Out buffer size: %d\n", buffer_size_out);
+	uint32_t frames_in  = captureParams.buffer_size;
+		printf("In buffer size: %d\n", frames_in * CHANNELS);
+	uint32_t frames_out = playbackParams.buffer_size;
+		printf("Out buffer size: %d\n", frames_out * CHANNELS);
 
 
-	short *read_buffer  = malloc(buffer_size_in  * sizeof(short));
-	short *write_buffer = malloc(buffer_size_out * sizeof(short));
-	short *proc_buffer  = malloc(buffer_size_out * sizeof(short));
-	memset(read_buffer , 0, buffer_size_in  * sizeof(short));
-	memset(write_buffer, 0, buffer_size_out * sizeof(short));
-	memset(proc_buffer , 0, buffer_size_out * sizeof(short));
+	short *read_buffer  = malloc(frames_in  * sizeof(short) * CHANNELS);
+	short *write_buffer = malloc(frames_out * sizeof(short) * CHANNELS);
+	short *proc_buffer  = malloc(frames_out * sizeof(short) * CHANNELS);
+	memset(read_buffer , 0, frames_in  * sizeof(short) * CHANNELS);
+	memset(write_buffer, 0, frames_out * sizeof(short) * CHANNELS);
+	memset(proc_buffer , 0, frames_out * sizeof(short) * CHANNELS);
 
 		// Process output
 		//				 ->	read_buffer	  ->proc_buffer		 ->	proc_buffer	  ->proc_buffer		^
@@ -140,31 +133,30 @@ int main(int argc, char **argv) {
 	snd_pcm_sframes_t inframes, outframes;
 	while (1) {
 		// Read line in	| because we specify the number of frames, not memory size to read ---v
-		while ((inframes = snd_pcm_readi(capture_handle, read_buffer, buffer_size_in / CHANNELS)) < 0) {
+		while ((inframes = snd_pcm_readi(capture_handle, read_buffer, frames_in)) < 0) {
 			fprintf(stderr, "Input buffer overrun (%s)\n", strerror(inframes));
 			snd_pcm_prepare(capture_handle);
 		}
-		int read_buffer_size = inframes * CHANNELS;	// This can also be buffer_size_in, but what if inframes is different? Is it possible?
 
 #ifdef TESTING
 	gettimeofday(&tval_before, NULL);
 #endif
 
-		memcpy(proc_buffer, read_buffer, buffer_size_out * sizeof(short));
+		memcpy(proc_buffer, read_buffer, frames_out * sizeof(short) * CHANNELS);
 
 		if (addEQ)
-			add_eq(read_buffer, proc_buffer, read_buffer_size);
+			add_eq(read_buffer, proc_buffer, inframes * CHANNELS);
 
 		if (addGain)
-			add_gain(proc_buffer, proc_buffer, read_buffer_size, gain);
+			add_gain(proc_buffer, proc_buffer, inframes * CHANNELS, gain);
 
 		if (addEcho)
-			add_echo(proc_buffer, proc_buffer, read_buffer_size);
+			add_echo(proc_buffer, proc_buffer, inframes * CHANNELS);
 
 		if (addDistort)
-			add_distort(proc_buffer, proc_buffer, read_buffer_size, 0.9, 0.5);
+			add_distort(proc_buffer, proc_buffer, inframes * CHANNELS, 1, 1);
 
-		memcpy(write_buffer, proc_buffer, buffer_size_out * sizeof(short));
+		memcpy(write_buffer, proc_buffer, frames_out * sizeof(short) * CHANNELS);
 
 #ifdef TESTING
 	gettimeofday(&tval_after, NULL);
