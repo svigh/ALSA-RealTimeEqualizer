@@ -154,7 +154,7 @@ int main(int argc, char **argv) {
 			add_echo(proc_buffer, proc_buffer, inframes * CHANNELS);
 
 		if (addDistort)
-			add_distort(proc_buffer, proc_buffer, inframes * CHANNELS, 1, 1);
+			add_distort(proc_buffer, proc_buffer, inframes * CHANNELS, 1.5, 1.5);
 
 		memcpy(write_buffer, proc_buffer, frames_out * sizeof(short) * CHANNELS);
 
