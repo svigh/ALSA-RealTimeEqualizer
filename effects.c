@@ -53,15 +53,15 @@ void add_distort(short *input_buffer, short *output_buffer, int buffer_size, dou
 // Nice-to-have: Add calculation of the frequency values affected
 void add_eq(short *input_buffer, short *output_buffer, int buffer_size) {
 	// From the GUI input - get the bands amplitudes to use to modify each band
-		FILE *f = fopen("eq_vals.txt", "r");
-		if (!f) {
-			fprintf(stderr, "Could not open EQ files.\n");
-			return;
-		}
-		for (int i = 0; i < NUM_EQ_BANDS; i++) {
-			fscanf(f, "%lf", &EQ_bands_amplitude[i]);
-		}
-		fclose(f);
+	FILE *f = fopen("eq_vals.txt", "r");
+	if (!f) {
+		fprintf(stderr, "Could not open EQ files.\n");
+		return;
+	}
+	for (int i = 0; i < NUM_EQ_BANDS; i++) {
+		fscanf(f, "%lf", &EQ_bands_amplitude[i]);
+	}
+	fclose(f);
 
 	// Buffers to keep the audio data and frequency data
 	fftw_complex *time_data = (fftw_complex*) fftw_malloc(sizeof(fftw_complex) * FFT_WINDOW_SIZE);
@@ -94,8 +94,8 @@ void add_eq(short *input_buffer, short *output_buffer, int buffer_size) {
 			// MODIFY THE FREQUENCIES ACCORDINGLY
 			int band = NUM_EQ_BANDS - 1;
 			for (int sample = 1; sample <= (FFT_WINDOW_SIZE / 2); sample++, band--) {
-				freq_data[sample][0] *= dB_TO_LINEAR(EQ_bands_amplitude[band]);
-				freq_data[sample][1] *= dB_TO_LINEAR(EQ_bands_amplitude[band]);
+				freq_data[sample][0] *= (double)EQ_bands_amplitude[band];
+				freq_data[sample][1] *= (double)EQ_bands_amplitude[band];
 			}
 
 			// FOR THE MIRRORED PART OF THE FREQUENCY DATA
@@ -104,8 +104,8 @@ void add_eq(short *input_buffer, short *output_buffer, int buffer_size) {
 			// BECAUSE FIRST LOOP DECREMENTS TOO MUCH ^
 
 			for (int sample = ((FFT_WINDOW_SIZE / 2) + 1); sample < FFT_WINDOW_SIZE; sample++, band++) {
-				freq_data[sample][0] *= dB_TO_LINEAR(EQ_bands_amplitude[band]);
-				freq_data[sample][1] *= dB_TO_LINEAR(EQ_bands_amplitude[band]);
+				freq_data[sample][0] *= (double)EQ_bands_amplitude[band];
+				freq_data[sample][1] *= (double)EQ_bands_amplitude[band];
 			}
 
 			// Needed, look into it, it may be normalization
@@ -120,10 +120,10 @@ void add_eq(short *input_buffer, short *output_buffer, int buffer_size) {
 
 			// Write to output, also cramp the results
 			for(int sample = ch, fft_sample = 0; sample < FFT_WINDOW_SIZE * CHANNELS; sample+=CHANNELS, fft_sample++) {
-				double current_time_data = round(time_data[fft_sample][0]);
+				double current_time_data = time_data[fft_sample][0];
 
-				if (current_time_data > SHORT_MAX) time_data[fft_sample][0] = SHORT_MAX;
-				if (current_time_data < SHORT_MIN) time_data[fft_sample][0] = SHORT_MIN;
+				if (current_time_data > SHORT_MAX) current_time_data = SHORT_MAX;
+				if (current_time_data < SHORT_MIN) current_time_data = SHORT_MIN;
 
 				output_buffer[sample + slice * FFT_WINDOW_SIZE * CHANNELS] = (short)current_time_data;
 			}

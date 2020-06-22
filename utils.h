@@ -18,7 +18,7 @@
 #define PLAYBACK_DEVICE "default"		// Let the system pick the wanted output
 #define CAPTURE_DEVICE  "plughw:0,0"	// Set the line device you are recording from
 #define RATE 44100
-#define CHANNELS 2
+#define CHANNELS 1
 #define PERIODS_PER_BUFFER 3
 #define BYTES_PER_SAMPLE 2
 #define FRAMES_PER_BUFFER 128
@@ -35,7 +35,7 @@
 ////////////////////////////
 // ***EFFECTS SETTINGS*** //
 ////////////////////////////
-#define NUM_EQ_BANDS 10
+#define NUM_EQ_BANDS 12
 #define FFT_WINDOW_SIZE (NUM_EQ_BANDS * 2)	// To get 10 relevant frequency data { 0R; [1; N/2]-freq; (N/2; N) - mirrored freq }
 #define AMPLITUDE(x,y) sqrt((double)(x*x) + (y*y))
 #define dB_TO_LINEAR(x) pow(2, x / 3)
