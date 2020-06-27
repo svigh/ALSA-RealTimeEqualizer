@@ -113,8 +113,8 @@ void add_eq(float *input_buffer, float *output_buffer, int buffer_size) {
 			for(int sample = ch, fft_sample = 0; sample < FFT_WINDOW_SIZE * CHANNELS; sample+=CHANNELS, fft_sample++) {
 				double current_time_data = time_data[fft_sample][0];
 
-				if (current_time_data > SHORT_MAX){ current_time_data = SHORT_MAX; fprintf(stderr, "WARNING: Bass clipping\n");}
-				if (current_time_data < SHORT_MIN){ current_time_data = SHORT_MIN; fprintf(stderr, "WARNING: Highs clipping\n");}
+				if (current_time_data > SHORT_MAX)current_time_data = SHORT_MAX;
+				if (current_time_data < SHORT_MIN)current_time_data = SHORT_MIN;
 
 				output_buffer[sample + slice * FFT_WINDOW_SIZE * CHANNELS] = (float)current_time_data;
 			}
