@@ -19,15 +19,15 @@
 #define CAPTURE_DEVICE  "plughw:0,0"	// Set the line device you are recording from
 #define RATE 44100
 #define CHANNELS 2
-#define PERIODS_PER_BUFFER 3
+#define PERIODS_PER_BUFFER 8
 #define BYTES_PER_SAMPLE 2
-#define FRAMES_PER_BUFFER 128
+#define FRAMES_PER_BUFFER 880
 
 /////////////////
 // ***UTILS*** //
 /////////////////
-#define SHORT_MAX 32767
-#define SHORT_MIN -32767
+#define SHORT_MAX 1
+#define SHORT_MIN -1
 #define PI 3.141592
 #define BUFFER_COUNT 100
 #define uS_IN_MS 1000
@@ -35,8 +35,10 @@
 ////////////////////////////
 // ***EFFECTS SETTINGS*** //
 ////////////////////////////
-#define NUM_EQ_BANDS 12
-#define FFT_WINDOW_SIZE (NUM_EQ_BANDS * 2)	// To get 10 relevant frequency data { 0R; [1; N/2]-freq; (N/2; N) - mirrored freq }
+#define NUM_EQ_BANDS 10
+#define FREQ_PRECISION 44
+#define FREQ_BAND_STEP 5
+#define FFT_WINDOW_SIZE (NUM_EQ_BANDS * 2 * FREQ_PRECISION)	// To get 10 relevant frequency data { 0R; [1; N/2]-freq; (N/2; N) - mirrored freq }
 #define AMPLITUDE(x,y) sqrt((double)(x*x) + (y*y))
 #define dB_TO_LINEAR(x) pow(2, x / 3)
 #define ECHO_AMOUNT 4096				// How many frames/samples of echo

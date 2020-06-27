@@ -5,11 +5,11 @@ import os
 CWD = os.path.dirname(os.path.realpath(__file__))
 AUDIO_START_CMD = "./playback"
 AUDIO_COMPILE_CMD = "gcc -Wall -o playback playback.c utils.c effects.c -lasound -w -lpthread -lfftw3 -lm"
-NUM_EQ_BANDS = 12
+NUM_EQ_BANDS = 10
 EQ_VALS_FILE = "eq_vals.txt"
 
-EQ_bands = [1 for x in range(NUM_EQ_BANDS)]
-EQ_format = "%s %s %s %s %s %s %s %s %s %s %s %s"
+EQ_bands = [0 for x in range(NUM_EQ_BANDS)]
+EQ_format = "%s %s %s %s %s %s %s %s %s %s"
 
 
 def write_eq_vals_to_file():

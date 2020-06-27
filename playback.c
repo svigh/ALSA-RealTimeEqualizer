@@ -105,12 +105,12 @@ int main(int argc, char **argv) {
 		printf("Out buffer size: %d\n", frames_out * CHANNELS);
 
 
-	short *read_buffer  = malloc(frames_in  * sizeof(short) * CHANNELS);
-	short *write_buffer = malloc(frames_out * sizeof(short) * CHANNELS);
-	short *proc_buffer  = malloc(frames_out * sizeof(short) * CHANNELS);
-	memset(read_buffer , 0, frames_in  * sizeof(short) * CHANNELS);
-	memset(write_buffer, 0, frames_out * sizeof(short) * CHANNELS);
-	memset(proc_buffer , 0, frames_out * sizeof(short) * CHANNELS);
+	float *read_buffer  = malloc(frames_in  * sizeof(float) * CHANNELS);
+	float *write_buffer = malloc(frames_out * sizeof(float) * CHANNELS);
+	float *proc_buffer  = malloc(frames_out * sizeof(float) * CHANNELS);
+	memset(read_buffer , 0, frames_in  * sizeof(float) * CHANNELS);
+	memset(write_buffer, 0, frames_out * sizeof(float) * CHANNELS);
+	memset(proc_buffer , 0, frames_out * sizeof(float) * CHANNELS);
 
 		// Process output
 		//				 ->	read_buffer	  ->proc_buffer		 ->	proc_buffer	  ->proc_buffer		^
@@ -141,8 +141,7 @@ int main(int argc, char **argv) {
 #ifdef TESTING
 	gettimeofday(&tval_before, NULL);
 #endif
-
-		memcpy(proc_buffer, read_buffer, frames_out * sizeof(short) * CHANNELS);
+		memcpy(proc_buffer, read_buffer, frames_out * sizeof(float) * CHANNELS);
 
 		if (addEQ)
 			add_eq(read_buffer, proc_buffer, inframes * CHANNELS);
@@ -156,8 +155,7 @@ int main(int argc, char **argv) {
 		if (addDistort)
 			add_distort(proc_buffer, proc_buffer, inframes * CHANNELS, 1.5, 1.5);
 
-		memcpy(write_buffer, proc_buffer, frames_out * sizeof(short) * CHANNELS);
-
+		memcpy(write_buffer, proc_buffer, frames_out * sizeof(float) * CHANNELS);
 #ifdef TESTING
 	gettimeofday(&tval_after, NULL);
 	timersub(&tval_after, &tval_before, &tval_result);

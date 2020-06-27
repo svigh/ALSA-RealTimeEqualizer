@@ -3,8 +3,8 @@
 
 double EQ_bands_amplitude[NUM_EQ_BANDS] = {0};
 
-void add_echo(short *input_buffer, short *output_buffer, int buffer_size) {
-	short static circular_buffer[ECHO_AMOUNT];	// Have it static if the echo amount is
+void add_echo(float *input_buffer, float *output_buffer, int buffer_size) {
+	float static circular_buffer[ECHO_AMOUNT];	// Have it static if the echo amount is
 	int static circular_buffer_index = 0;		// greater than the current buffer size
 
 	for (int sample = 0; sample < buffer_size; sample++) {
@@ -16,7 +16,7 @@ void add_echo(short *input_buffer, short *output_buffer, int buffer_size) {
 }
 
 // No need for gain to have per channel split
-void add_gain(short *input_buffer, short *output_buffer, int buffer_size, double gain) {
+void add_gain(float *input_buffer, float *output_buffer, int buffer_size, double gain) {
 	for (int sample = 0; sample < buffer_size; sample++) {
 		if ((input_buffer[sample] * gain) > SHORT_MAX) {
 			output_buffer[sample] = SHORT_MAX;
@@ -31,9 +31,9 @@ void add_gain(short *input_buffer, short *output_buffer, int buffer_size, double
 }
 
 // No need for distort to have per channel split
-void add_distort(short *input_buffer, short *output_buffer, int buffer_size, double min_multiplier, double max_multiplier) {
-	short max_threshold = SHORT_MAX * min_multiplier / 100;
-	short min_threshold = SHORT_MIN * max_multiplier / 100;
+void add_distort(float *input_buffer, float *output_buffer, int buffer_size, double min_multiplier, double max_multiplier) {
+	float max_threshold = SHORT_MAX * min_multiplier / 100;
+	float min_threshold = SHORT_MIN * max_multiplier / 100;
 	double volume_fix_amount = ((1 + min_multiplier) + (1 + max_multiplier)) / 2;
 
 	for (int sample = 0; sample < buffer_size; sample++) {
@@ -53,7 +53,7 @@ void add_distort(short *input_buffer, short *output_buffer, int buffer_size, dou
 }
 
 // Nice-to-have: Add calculation of the frequency values affected
-void add_eq(short *input_buffer, short *output_buffer, int buffer_size) {
+void add_eq(float *input_buffer, float *output_buffer, int buffer_size) {
 	// From the GUI input - get the bands amplitudes to use to modify each band
 	FILE *f = fopen("eq_vals.txt", "r");
 	if (!f) {
@@ -90,44 +90,33 @@ void add_eq(short *input_buffer, short *output_buffer, int buffer_size) {
 			// TODO: Use the FFT() code
 			fftw_execute(fft);
 
-			// From N FFT points we get N symetric frequency data
-			// First frequency value doesnt matter for us(DC offset and carries no frequency dependent information)
-			// 1 - N/2 are relevant frequencies
-			// MODIFY THE FREQUENCIES ACCORDINGLY
-			int band = NUM_EQ_BANDS - 1;
-			for (int sample = 1; sample <= (FFT_WINDOW_SIZE / 2); sample++, band--) {
-				freq_data[sample][0] *= (double)EQ_bands_amplitude[band];
-				freq_data[sample][1] *= (double)EQ_bands_amplitude[band];
-			}
-
-			// FOR THE MIRRORED PART OF THE FREQUENCY DATA
-			// BECAUSE THE MIDDLE IS MIRRORED V SO SKIP MODIFYING IT TWICE
-			if (FFT_WINDOW_SIZE % 2 == 0) band++;band++;
-			// BECAUSE FIRST LOOP DECREMENTS TOO MUCH ^
-
-			for (int sample = ((FFT_WINDOW_SIZE / 2) + 1); sample < FFT_WINDOW_SIZE; sample++, band++) {
-				freq_data[sample][0] *= (double)EQ_bands_amplitude[band];
-				freq_data[sample][1] *= (double)EQ_bands_amplitude[band];
-			}
-
 			// Needed, look into it, it may be normalization
 			for(int sample = 0; sample < FFT_WINDOW_SIZE; sample++) {
 				freq_data[sample][0] *= mux;
 				freq_data[sample][1] *= mux;
 			}
 
-			// Rebuild the audio samples
-			// TODO: Use the FFT() code
+			int freq = 1;
+			for (int band = 0; band < NUM_EQ_BANDS; band++) {
+				freq += (FREQ_BAND_STEP * band);
+				freq_data[freq][0] *= dB_TO_LINEAR((double)EQ_bands_amplitude[band]);
+				freq_data[freq][1] *= dB_TO_LINEAR((double)EQ_bands_amplitude[band]);
+				if (freq < FFT_WINDOW_SIZE / 2) {
+					freq_data[FFT_WINDOW_SIZE - 1 - freq][0] *= dB_TO_LINEAR((double)EQ_bands_amplitude[band]);
+					freq_data[FFT_WINDOW_SIZE - 1 - freq][1] *= dB_TO_LINEAR((double)EQ_bands_amplitude[band]);
+				}
+			}
+
 			fftw_execute(ifft);
 
 			// Write to output, also cramp the results
 			for(int sample = ch, fft_sample = 0; sample < FFT_WINDOW_SIZE * CHANNELS; sample+=CHANNELS, fft_sample++) {
 				double current_time_data = time_data[fft_sample][0];
 
-				if (current_time_data > SHORT_MAX) current_time_data = SHORT_MAX;
-				if (current_time_data < SHORT_MIN) current_time_data = SHORT_MIN;
+				if (current_time_data > SHORT_MAX){ current_time_data = SHORT_MAX; fprintf(stderr, "WARNING: Bass clipping\n");}
+				if (current_time_data < SHORT_MIN){ current_time_data = SHORT_MIN; fprintf(stderr, "WARNING: Highs clipping\n");}
 
-				output_buffer[sample + slice * FFT_WINDOW_SIZE * CHANNELS] = (short)current_time_data;
+				output_buffer[sample + slice * FFT_WINDOW_SIZE * CHANNELS] = (float)current_time_data;
 			}
 		}
 	}

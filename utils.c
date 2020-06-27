@@ -1,7 +1,7 @@
 #include "utils.h"
 
 unsigned int rate = RATE;
-unsigned int format = SND_PCM_FORMAT_S16_LE;
+unsigned int format = SND_PCM_FORMAT_FLOAT_LE;
 unsigned int in_channels = CHANNELS;
 unsigned int out_channels = CHANNELS;
 int periods_per_buffer = PERIODS_PER_BUFFER;
