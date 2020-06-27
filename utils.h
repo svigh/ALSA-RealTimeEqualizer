@@ -40,7 +40,7 @@
 #define FREQ_BAND_STEP 5
 #define FFT_WINDOW_SIZE (NUM_EQ_BANDS * 2 * FREQ_PRECISION)	// To get 10 relevant frequency data { 0R; [1; N/2]-freq; (N/2; N) - mirrored freq }
 #define AMPLITUDE(x,y) sqrt((double)(x*x) + (y*y))
-#define dB_TO_LINEAR(x) pow(2, x / 3)
+#define dB_TO_LINEAR(x) pow(2.0, x / 3.0)
 #define ECHO_AMOUNT 4096				// How many frames/samples of echo
 
 // ***REMOVE LATER***
