@@ -16,7 +16,7 @@ def write_eq_vals_to_file():
 	with open(EQ_VALS_FILE, "w") as eq_vals:
 		eq_vals.write( EQ_format % (str(EQ_bands[0]), str(EQ_bands[1]), str(EQ_bands[2]),\
 			str(EQ_bands[3]), str(EQ_bands[4]), str(EQ_bands[5]), str(EQ_bands[6]),\
-			str(EQ_bands[7]), str(EQ_bands[8]), str(EQ_bands[9]), str(EQ_bands[10]), str(EQ_bands[11])))
+			str(EQ_bands[7]), str(EQ_bands[8]), str(EQ_bands[9])))
 
 
 try:
