@@ -18,10 +18,10 @@
 #define PLAYBACK_DEVICE "default"		// Let the system pick the wanted output
 #define CAPTURE_DEVICE  "plughw:0,0"	// Set the line device you are recording from
 #define RATE 44100
-#define CHANNELS 2
-#define PERIODS_PER_BUFFER 8
+#define CHANNELS 1
+#define PERIODS_PER_BUFFER 4
 #define BYTES_PER_SAMPLE 2
-#define FRAMES_PER_BUFFER 880
+#define FRAMES_PER_BUFFER 440
 
 /////////////////
 // ***UTILS*** //
