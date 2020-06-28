@@ -15,19 +15,19 @@
 //////////////////////////
 // ***AUDIO SETTINGS*** //
 //////////////////////////
-#define PLAYBACK_DEVICE "default"		// Let the system pick the wanted output
-#define CAPTURE_DEVICE  "plughw:0,0"	// Set the line device you are recording from
+#define PLAYBACK_DEVICE "plughw:1,0"		// Let the system pick the wanted output
+#define CAPTURE_DEVICE  "plughw:1,0"	// Set the line device you are recording from
 #define RATE 44100
 #define CHANNELS 1
 #define PERIODS_PER_BUFFER 4
 #define BYTES_PER_SAMPLE 2
-#define FRAMES_PER_BUFFER 440
+#define FRAMES_PER_BUFFER 220
 
 /////////////////
 // ***UTILS*** //
 /////////////////
-#define SHORT_MAX 1
-#define SHORT_MIN -1
+#define MAX_SAMPLE_VALUE 1
+#define MIN_SAMPLE_VALUE -1
 #define PI 3.141592
 #define BUFFER_COUNT 100
 #define uS_IN_MS 1000

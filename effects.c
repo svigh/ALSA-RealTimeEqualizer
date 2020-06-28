@@ -18,11 +18,11 @@ void add_echo(float *input_buffer, float *output_buffer, int buffer_size) {
 // No need for gain to have per channel split
 void add_gain(float *input_buffer, float *output_buffer, int buffer_size, double gain) {
 	for (int sample = 0; sample < buffer_size; sample++) {
-		if ((input_buffer[sample] * gain) > SHORT_MAX) {
-			output_buffer[sample] = SHORT_MAX;
+		if ((input_buffer[sample] * gain) > MAX_SAMPLE_VALUE) {
+			output_buffer[sample] = MAX_SAMPLE_VALUE;
 		} else {
-			if ((input_buffer[sample] * gain) < SHORT_MIN) {
-				output_buffer[sample] = SHORT_MIN;
+			if ((input_buffer[sample] * gain) < MIN_SAMPLE_VALUE) {
+				output_buffer[sample] = MIN_SAMPLE_VALUE;
 			} else {
 				output_buffer[sample] = input_buffer[sample] * gain;
 			}
@@ -32,8 +32,8 @@ void add_gain(float *input_buffer, float *output_buffer, int buffer_size, double
 
 // No need for distort to have per channel split
 void add_distort(float *input_buffer, float *output_buffer, int buffer_size, double min_multiplier, double max_multiplier) {
-	float max_threshold = SHORT_MAX * min_multiplier / 100;
-	float min_threshold = SHORT_MIN * max_multiplier / 100;
+	float max_threshold = MAX_SAMPLE_VALUE * min_multiplier / 100;
+	float min_threshold = MIN_SAMPLE_VALUE * max_multiplier / 100;
 	double volume_fix_amount = ((1 + min_multiplier) + (1 + max_multiplier)) / 2;
 
 	for (int sample = 0; sample < buffer_size; sample++) {
@@ -113,8 +113,8 @@ void add_eq(float *input_buffer, float *output_buffer, int buffer_size) {
 			for(int sample = ch, fft_sample = 0; sample < FFT_WINDOW_SIZE * CHANNELS; sample+=CHANNELS, fft_sample++) {
 				double current_time_data = time_data[fft_sample][0];
 
-				if (current_time_data > SHORT_MAX)current_time_data = SHORT_MAX;
-				if (current_time_data < SHORT_MIN)current_time_data = SHORT_MIN;
+				if (current_time_data > MAX_SAMPLE_VALUE)current_time_data = MAX_SAMPLE_VALUE;
+				if (current_time_data < MIN_SAMPLE_VALUE)current_time_data = MIN_SAMPLE_VALUE;
 
 				output_buffer[sample + slice * FFT_WINDOW_SIZE * CHANNELS] = (float)current_time_data;
 			}
