@@ -82,7 +82,7 @@ void add_eq(float *input_buffer, float *output_buffer, int buffer_size) {
 	for (int slice = 0; slice < buffer_size / (FFT_WINDOW_SIZE * CHANNELS); slice++) {
 		for (int ch = 0; ch < CHANNELS; ch++) {
 			for(int sample = ch, fft_sample = 0; sample < FFT_WINDOW_SIZE * CHANNELS; sample+=CHANNELS, fft_sample++) {
-				time_data[fft_sample][0] = input_buffer[sample + slice * FFT_WINDOW_SIZE * CHANNELS];
+				time_data[fft_sample][0] = input_buffer[sample + slice * FFT_WINDOW_SIZE * CHANNELS] * dB_TO_LINEAR(-5.0);
 				time_data[fft_sample][1] = 0;
 			}
 
