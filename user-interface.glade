@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<!-- Generated with glade 3.22.2 -->
+<!-- Generated with glade 3.36.0 -->
 <interface>
   <requires lib="gtk+" version="3.20"/>
   <object class="GtkAdjustment" id="adjustment0">
@@ -74,9 +74,6 @@
   </object>
   <object class="GtkWindow" id="MainWindow">
     <property name="can_focus">False</property>
-    <child type="titlebar">
-      <placeholder/>
-    </child>
     <child>
       <object class="GtkNotebook" id="Notebook">
         <property name="visible">True</property>
@@ -90,25 +87,24 @@
             <property name="row_homogeneous">True</property>
             <property name="column_homogeneous">True</property>
             <child>
-              <object class="GtkButton" id="StopEffectsButton">
-                <property name="label" translatable="yes">Stop Effects</property>
+              <object class="GtkButton" id="AddGainButton">
+                <property name="label" translatable="yes">Add Gain</property>
                 <property name="visible">True</property>
                 <property name="can_focus">True</property>
                 <property name="receives_default">True</property>
-                <signal name="clicked" handler="StopEffectsButton_clicked" swapped="no"/>
+                <signal name="clicked" handler="AddGainButton_clicked" swapped="no"/>
               </object>
               <packing>
-                <property name="left_attach">0</property>
-                <property name="top_attach">1</property>
+                <property name="left_attach">2</property>
+                <property name="top_attach">0</property>
               </packing>
             </child>
             <child>
-              <object class="GtkButton" id="AddEchoButton">
-                <property name="label" translatable="yes">Add Echo</property>
+              <object class="GtkButton" id="AddChorusButton">
+                <property name="label" translatable="yes">Add Chorus</property>
                 <property name="visible">True</property>
                 <property name="can_focus">True</property>
                 <property name="receives_default">True</property>
-                <signal name="clicked" handler="AddEchoButton_clicked" swapped="no"/>
               </object>
               <packing>
                 <property name="left_attach">2</property>
@@ -124,21 +120,46 @@
                 <signal name="clicked" handler="AddEqualizerButton_clicked" swapped="no"/>
               </object>
               <packing>
-                <property name="left_attach">2</property>
+                <property name="left_attach">1</property>
+                <property name="top_attach">1</property>
+              </packing>
+            </child>
+            <child>
+              <object class="GtkButton" id="AddRevebButton">
+                <property name="label" translatable="yes">Add Reverb</property>
+                <property name="visible">True</property>
+                <property name="can_focus">True</property>
+                <property name="receives_default">True</property>
+              </object>
+              <packing>
+                <property name="left_attach">0</property>
                 <property name="top_attach">2</property>
               </packing>
             </child>
             <child>
-              <object class="GtkButton" id="AddGainButton">
-                <property name="label" translatable="yes">Add Gain</property>
+              <object class="GtkButton" id="StopEffectsButton">
+                <property name="label" translatable="yes">Stop Effects</property>
                 <property name="visible">True</property>
                 <property name="can_focus">True</property>
                 <property name="receives_default">True</property>
-                <signal name="clicked" handler="AddGainButton_clicked" swapped="no"/>
+                <signal name="clicked" handler="StopEffectsButton_clicked" swapped="no"/>
+              </object>
+              <packing>
+                <property name="left_attach">0</property>
+                <property name="top_attach">0</property>
+              </packing>
+            </child>
+            <child>
+              <object class="GtkButton" id="AddEchoButton">
+                <property name="label" translatable="yes">Add Echo</property>
+                <property name="visible">True</property>
+                <property name="can_focus">True</property>
+                <property name="receives_default">True</property>
+                <signal name="clicked" handler="AddEchoButton_clicked" swapped="no"/>
               </object>
               <packing>
                 <property name="left_attach">1</property>
-                <property name="top_attach">1</property>
+                <property name="top_attach">0</property>
               </packing>
             </child>
             <child>
@@ -150,15 +171,9 @@
                 <signal name="clicked" handler="AddDistortionButton_clicked" swapped="no"/>
               </object>
               <packing>
-                <property name="left_attach">1</property>
-                <property name="top_attach">2</property>
+                <property name="left_attach">0</property>
+                <property name="top_attach">1</property>
               </packing>
-            </child>
-            <child>
-              <placeholder/>
-            </child>
-            <child>
-              <placeholder/>
             </child>
             <child>
               <placeholder/>
@@ -508,6 +523,9 @@
           <placeholder/>
         </child>
       </object>
+    </child>
+    <child type="titlebar">
+      <placeholder/>
     </child>
   </object>
 </interface>
