@@ -112,10 +112,6 @@ void add_eq(float *input_buffer, float *output_buffer, int buffer_size) {
 			// Write to output, also cramp the results
 			for(int sample = ch, fft_sample = 0; sample < FFT_WINDOW_SIZE * CHANNELS; sample+=CHANNELS, fft_sample++) {
 				double current_time_data = time_data[fft_sample][0];
-
-				// if (current_time_data > MAX_SAMPLE_VALUE)current_time_data = MAX_SAMPLE_VALUE;
-				// if (current_time_data < MIN_SAMPLE_VALUE)current_time_data = MIN_SAMPLE_VALUE;
-
 				output_buffer[sample + slice * FFT_WINDOW_SIZE * CHANNELS] = (float)current_time_data;
 			}
 		}
